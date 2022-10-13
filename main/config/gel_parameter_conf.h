@@ -7,7 +7,6 @@
  * Parameter
  */
 
-#define GEL_PARAMETER_MAX_SIZE  8
-#define GEL_PARAMETER_USER_DATA pudata_t
+#define GEL_PARAMETER_MAX_SIZE  2
 
 #endif

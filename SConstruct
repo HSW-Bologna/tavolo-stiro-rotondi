@@ -46,6 +46,7 @@ CFLAGS = [
     '-DprojCOVERAGE_TEST=1',
     '-DGEL_PARAMETER_CONFIGURATION_HEADER="\\"gel_parameter_conf.h\\""',
     '-DGEL_PAGEMANAGER_CONFIGURATION_HEADER="\\"gel_pman_conf.h\\""',
+    "-DI2C_DEVICES_STRUCT_TM_CONVERSION",
     "-Wno-unused-parameter",
     "-static-libgcc",
     "-static-libstdc++",
@@ -100,6 +101,12 @@ def main():
         f'{FREERTOS}/SConscript', exports=['freertos_env'])
     env['CPPPATH'] += [include]
 
+    i2c_env = env
+    i2c_selected = ["dummy", "rtc/RX8010"]
+    (i2c, include) = SConscript(
+        f'{COMPONENTS}/I2C/SConscript', exports=['i2c_env', 'i2c_selected'])
+    env['CPPPATH'] += [include]
+
     gel_env = env
     gel_selected = ["pagemanager", "collections",
                     "parameter", "timer", "data_structures"]
@@ -125,7 +132,7 @@ def main():
                 File(f'{B64}/decode.c'), File(f'{B64}/buffer.c')]
 
     prog = env.Program(PROGRAM, sdkconfig + sources +
-                       freertos + gel)
+                       freertos + gel + i2c)
     env.Depends(prog, translations)
     PhonyTargets("run", f"./{PROGRAM}", prog, env)
     compileDB = env.CompilationDatabase('build/compile_commands.json')

@@ -23,32 +23,33 @@ typedef enum {
 } parameter_display_type_t;
 
 
-typedef struct {
-    const char  **desc;
-    const char ***values;
-    const char   *fmt;
-
-    parameter_display_type_t t;
-    int                      min_sec;
-} pudata_t;
-
-
 typedef enum {
     VIEW_EVENT_CODE_LVGL = 0,
     VIEW_EVENT_CODE_TIMER,
     VIEW_EVENT_CODE_OPEN,
+    VIEW_EVENT_CODE_UPDATE,
+    VIEW_EVENT_CODE_VAPORE,
 } view_event_code_t;
 
 
 typedef enum {
     VIEW_CONTROLLER_MESSAGE_CODE_NOTHING = 0,
+    VIEW_CONTROLLER_MESSAGE_CODE_TEST_OUTPUT,
+    VIEW_CONTROLLER_MESSAGE_CODE_TOGGLE_BOILER,
 } view_controller_message_code_t;
 
 
 typedef struct {
     view_controller_message_code_t code;
 
-    union {};
+    union {
+        struct {
+            uint8_t number;
+            uint8_t value;
+        } digout;
+
+        uint8_t test;
+    };
 } view_controller_message_t;
 
 
@@ -85,8 +86,8 @@ typedef struct {
 
     union {
         struct {
-            void *page;
-            void *extra;
+            const void *page;
+            void       *extra;
         };
         int id;
     };
@@ -96,6 +97,7 @@ typedef struct {
 typedef struct {
     view_controller_message_t cmsg;
     view_page_message_t       vmsg;
+    uint8_t                   beep;
 } view_message_t;
 
 #endif

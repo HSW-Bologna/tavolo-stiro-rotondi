@@ -23,7 +23,7 @@ void app_main(void *arg) {
     view_init(&model, sdl_display_flush, sdl_mouse_read);
     controller_init(&model);
 
-    ESP_LOGI(TAG, "Begin main loop");
+    ESP_LOGI(TAG, "Begin main loop %zu", sizeof(lv_style_t));
     for (;;) {
         controller_gui_manage(&model);
         controller_manage(&model);

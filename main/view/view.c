@@ -64,9 +64,10 @@ void view_init(model_t *pmodel,
 
     static lv_indev_drv_t indev_drv;
     lv_indev_drv_init(&indev_drv); /*Basic initialization*/
-    indev_drv.long_press_repeat_time = 250UL;
     indev_drv.type                   = LV_INDEV_TYPE_POINTER;
     indev_drv.read_cb                = read_cb;
+    indev_drv.long_press_time        = 1200UL;
+    indev_drv.long_press_repeat_time = 100UL;
     /*Register the driver in LVGL and save the created input device object*/
     touch_indev = lv_indev_drv_register(&indev_drv);
 
@@ -260,6 +261,8 @@ static void event_callback(lv_event_t *event) {
         if (list != NULL) {
             lv_obj_set_width(list, lv_obj_get_width(obj));
         }
+    } else if (lv_obj_check_type(obj, &lv_arc_class)) {
+        pman_event.value = lv_arc_get_value(obj);
     } else if (lv_obj_check_type(obj, &lv_switch_class)) {
         pman_event.value = lv_obj_has_state(obj, LV_STATE_CHECKED);
     } else if (lv_obj_check_type(obj, &lv_roller_class)) {

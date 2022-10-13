@@ -1,0 +1,5 @@
+#ifndef FAN_CONTROL_H_INCLUDED
+#define FAN_CONTROL_H_INCLUDED
+
+
+#endif

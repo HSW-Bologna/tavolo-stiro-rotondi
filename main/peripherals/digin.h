@@ -5,6 +5,10 @@
 #include <stdint.h>
 
 
+#define DIGIN_FOTOCELLULA_DX DIGIN_IN1
+#define DIGIN_PEDALE         DIGIN_IN3
+
+
 typedef enum {
     DIGIN_IN4 = 0,
     DIGIN_IN3,

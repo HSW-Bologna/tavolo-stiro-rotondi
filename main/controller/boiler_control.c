@@ -12,7 +12,8 @@
 
 typedef enum {
     BOILER_SM_STATE_OFF = 0,
-    BOILER_SM_STATE_ON,
+    BOILER_SM_STATE_FILLING,
+    BOILER_SM_STATE_HEATING,
 } boiler_control_sm_state_t;
 
 
@@ -26,15 +27,21 @@ typedef enum {
 DEFINE_STATE_MACHINE(boiler_control, boiler_control_event_t, model_t);
 
 
-static int  on_event_manager(model_t *pmodel, boiler_control_event_t event);
-static int  off_event_manager(model_t *pmodel, boiler_control_event_t event);
+static int off_event_manager(model_t *pmodel, boiler_control_event_t event);
+static int filling_event_manager(model_t *pmodel, boiler_control_event_t event);
+static int heating_event_manager(model_t *pmodel, boiler_control_event_t event);
+
 static void boiler_update(model_t *pmodel, uint8_t on);
 static void pump_update(model_t *pmodel, uint8_t on);
 
 
+static const char *TAG = "Boiler control";
+
+
 static boiler_control_event_manager_t managers[] = {
-    [BOILER_SM_STATE_OFF] = off_event_manager,
-    [BOILER_SM_STATE_ON]  = on_event_manager,
+    [BOILER_SM_STATE_OFF]     = off_event_manager,
+    [BOILER_SM_STATE_FILLING] = filling_event_manager,
+    [BOILER_SM_STATE_HEATING] = heating_event_manager,
 };
 
 static boiler_control_state_machine_t sm = {
@@ -68,24 +75,67 @@ static int off_event_manager(model_t *pmodel, boiler_control_event_t event) {
             break;
 
         case BOILER_CONTROL_EVENT_TOGGLE:
-            boiler_update(pmodel, 1);
-            return BOILER_SM_STATE_ON;
+            if (model_liquid_threshold_2_reached(pmodel)) {
+                ESP_LOGI(TAG, "Accensione caldaia diretta");
+                boiler_update(pmodel, 1);
+                return BOILER_SM_STATE_HEATING;
+            } else {
+                ESP_LOGI(TAG, "Caldaia vuota, riempo...");
+                pump_update(pmodel, 1);
+                return BOILER_SM_STATE_FILLING;
+            }
     }
 
     return -1;
 }
 
 
-static int on_event_manager(model_t *pmodel, boiler_control_event_t event) {
+static int filling_event_manager(model_t *pmodel, boiler_control_event_t event) {
     switch (event) {
         case BOILER_CONTROL_EVENT_LEVEL_CHANGE:
+            if (model_liquid_threshold_2_reached(pmodel)) {
+                // TODO: isteresi
+                ESP_LOGI(TAG, "Livello raggiunto, riscaldo");
+                boiler_update(pmodel, 1);
+                pump_update(pmodel, 0);
+                return BOILER_SM_STATE_HEATING;
+            }
+            break;
+
+        case BOILER_CONTROL_EVENT_REFRESH:
+            boiler_update(pmodel, 0);
+            pump_update(pmodel, 1);
+            break;
+
+        case BOILER_CONTROL_EVENT_TOGGLE:
+            ESP_LOGI(TAG, "Spegnimento");
+            pump_update(pmodel, 0);
+            return BOILER_SM_STATE_OFF;
+    }
+
+    return -1;
+}
+
+
+static int heating_event_manager(model_t *pmodel, boiler_control_event_t event) {
+    switch (event) {
+        case BOILER_CONTROL_EVENT_LEVEL_CHANGE:
+            if (!model_liquid_threshold_2_reached(pmodel)) {
+                // TODO: isteresi
+                ESP_LOGI(TAG, "Liquido finito, riempo...");
+                boiler_update(pmodel, 0);
+                pump_update(pmodel, 1);
+                return BOILER_SM_STATE_FILLING;
+            }
             break;
 
         case BOILER_CONTROL_EVENT_REFRESH:
             boiler_update(pmodel, 1);
+            pump_update(pmodel, 0);
             break;
 
         case BOILER_CONTROL_EVENT_TOGGLE:
+            ESP_LOGI(TAG, "Spegnimento");
             boiler_update(pmodel, 0);
             return BOILER_SM_STATE_OFF;
     }

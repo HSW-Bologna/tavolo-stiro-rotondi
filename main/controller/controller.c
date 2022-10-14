@@ -59,7 +59,6 @@ static hcontrol_data_t bracciolo_control = {
 
 
 static watcher_t watched_variables[NUM_WATCHED_VARIABLES + 1] = {};
-static uint8_t   variabili_velocita[4]                        = {0};
 static uint16_t  variabili_temperatura[6]                     = {0};
 
 
@@ -95,7 +94,7 @@ void controller_init(model_t *pmodel) {
     watched_variables[i++] = WATCHER(&pmodel->run.luce, refresh_light, pmodel);
     watched_variables[i++] = WATCHER(&pmodel->run.ferro_1, refresh_ferro_1, pmodel);
     watched_variables[i++] = WATCHER(&pmodel->run.ferro_2, refresh_ferro_2, pmodel);
-    watched_variables[i++] = WATCHER_ARRAY(variabili_velocita, 4, refresh_ventole, pmodel);
+    watched_variables[i++] = WATCHER(&pmodel->configuration.velocita_soffio, refresh_ventole, pmodel);
     watched_variables[i++] = WATCHER_ARRAY(variabili_temperatura, 6, refresh_temperature, pmodel);
     assert(i == NUM_WATCHED_VARIABLES);
     watched_variables[i] = WATCHER_NULL;
@@ -123,10 +122,14 @@ void controller_process_message(model_t *pmodel, view_controller_message_t *msg)
 
 
 void controller_manage(model_t *pmodel) {
-    static uint8_t old_vapore = 0;
-    unsigned long  ts_1s      = 0;
+    static uint8_t       old_vapore = 0;
+    static unsigned long ts_100ms   = 0;
+    static unsigned long ts_1s      = 0;
+    static unsigned long ts_5s      = 0;
 
-    if (digin_have_changed()) {
+    if (digin_have_changed() || is_expired(ts_100ms, get_millis(), 100)) {
+        fan_control(pmodel);
+
         uint8_t vapore = digin_read(DIGIN_VAP);
 
         pmodel->test.inputs[0] = digin_read(DIGIN_IN1);
@@ -134,6 +137,8 @@ void controller_manage(model_t *pmodel) {
         pmodel->test.inputs[2] = digin_read(DIGIN_IN3);
         pmodel->test.inputs[3] = digin_read(DIGIN_IN4);
         pmodel->test.inputs[4] = vapore;
+
+        // ESP_LOG_BUFFER_HEX(TAG, pmodel->test.inputs, 5);
 
         if (old_vapore != vapore) {
             if (vapore) {
@@ -145,6 +150,7 @@ void controller_manage(model_t *pmodel) {
         view_event((view_event_t){.code = VIEW_EVENT_CODE_UPDATE});
 
         digin_sync();
+        ts_100ms = get_millis();
     }
 
     if (is_expired(ts_1s, get_millis(), 1000UL)) {
@@ -159,9 +165,17 @@ void controller_manage(model_t *pmodel) {
 
         if (update) {
             view_event((view_event_t){.code = VIEW_EVENT_CODE_UPDATE});
+            boiler_control_value_changed(pmodel);
         }
 
         ts_1s = get_millis();
+    }
+
+    if (is_expired(ts_5s, get_millis(), 5000UL)) {
+        ESP_LOGI(TAG, "State dump:\n\tFotocellula dx: %i\n\tPedale: %i\n\tADC1: %i\n\tADC2: %i\n",
+                 pmodel->test.inputs[0], pmodel->test.inputs[3], model_get_adc_level_1(pmodel),
+                 model_get_adc_level_2(pmodel));
+        ts_5s = get_millis();
     }
 
     update_watched_variables(pmodel);
@@ -199,11 +213,9 @@ static void refresh_ferro_2(void *mem, void *arg) {
 
 static void refresh_ventole(void *mem, void *arg) {
     (void)mem;
+    ESP_LOGI(TAG, "Refresh ventol");
     model_t *pmodel = arg;
-    if (!model_get_test(pmodel)) {
-        phase_cut_set_percentage(PHASE_CUT_FAN_1, model_get_percentuale_soffio(pmodel));
-        phase_cut_set_percentage(PHASE_CUT_FAN_2, model_get_percentuale_aspirazione(pmodel));
-    }
+    fan_control(pmodel);
 }
 
 
@@ -232,19 +244,14 @@ static void refresh_test(void *mem, void *arg) {
         refresh_light(NULL, pmodel);
         refresh_ferro_1(NULL, pmodel);
         refresh_ferro_2(NULL, pmodel);
-        refresh_ventole(NULL, pmodel);
         hcontrol_refresh(&tavolo_control);
         hcontrol_refresh(&bracciolo_control);
+        fan_control(pmodel);
     }
 }
 
 
 static void update_watched_variables(model_t *pmodel) {
-    variabili_velocita[0] = model_get_soffio_on(pmodel);
-    variabili_velocita[1] = model_get_aspirazione_on(pmodel);
-    variabili_velocita[2] = model_get_velocita_soffio(pmodel);
-    variabili_velocita[3] = model_get_velocita_aspirazione(pmodel);
-
     variabili_temperatura[0] = model_get_temperatura_tavolo(pmodel);
     variabili_temperatura[1] = model_get_temperatura_bracciolo(pmodel);
     variabili_temperatura[2] = model_get_setpoint_temperatura_tavolo(pmodel);

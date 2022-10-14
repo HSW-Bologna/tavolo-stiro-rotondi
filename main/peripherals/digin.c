@@ -62,11 +62,11 @@ static void digin_timer(TimerHandle_t timer) {
     if (tca9534_read_input_port(io_expander_1, &port)) {
         ESP_LOGW(TAG, "Error reading inputs!");
     } else {
-        port = (~port) & 0x1F;
+        port = ~port;
         ESP_LOGD(TAG, "0x%02X", port);
 
         xSemaphoreTake(sem, portMAX_DELAY);
-        if (debounce_filter(&filter, (~port) & 0x1F, 4)) {
+        if (debounce_filter(&filter, port, 4)) {
             update = 1;
         }
         xSemaphoreGive(sem);

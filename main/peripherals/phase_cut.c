@@ -170,6 +170,8 @@ void phase_cut_set_percentage(phase_cut_fan_t fan, unsigned int perc) {
         *offs[fan]    = 0;
         *periods[fan] = sine_percentage_linearization[perc - 1];
     }
+
+    ESP_LOGD(TAG, "%i %i %i %i %i %i", fan, perc, off1, off2, full1, full2);
 }
 
 
@@ -179,7 +181,6 @@ static void IRAM_ATTR zcross_isr_handler(void *arg) {
     } else if (full1) {
         gpio_set_level(HAP_SOFF, 1);
     }
-
 
     if (off2) {
         gpio_set_level(HAP_ASP, 0);

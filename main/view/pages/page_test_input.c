@@ -77,6 +77,7 @@ static view_message_t page_event(model_t *pmodel, void *args, view_event_t event
                     switch (event.data.id) {
                         case BACK_BTN_ID:
                             msg.vmsg.code = VIEW_PAGE_MESSAGE_CODE_BACK;
+                            model_set_test(pmodel, 0);
                             break;
 
                         case NEXT_BTN_ID:

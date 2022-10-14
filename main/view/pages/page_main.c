@@ -55,10 +55,7 @@ enum {
     BOILER_BTN_ID,
     MENU_BTN_ID,
     LUCE_BTN_ID,
-    TOGGLE_FAN_SOFFIO_BTN_ID,
-    TOGGLE_FAN_ASPIRAZIONE_BTN_ID,
     VELOCITA_SOFFIO_SLIDER_ID,
-    VELOCITA_ASPIRAZIONE_SLIDER_ID,
     SETPOINT_TAVOLO_ARC_ID,
     SETPOINT_TAVOLO_PLUS_BTN_ID,
     SETPOINT_TAVOLO_MINUS_BTN_ID,
@@ -67,8 +64,7 @@ enum {
     SETPOINT_BRACCIOLO_MINUS_BTN_ID,
     FAN_SOFFIO_PLUS_BTN_ID,
     FAN_SOFFIO_MINUS_BTN_ID,
-    FAN_ASPIRAZIONE_PLUS_BTN_ID,
-    FAN_ASPIRAZIONE_MINUS_BTN_ID,
+    SOFFIO_POPUP_BTN_ID,
     BLANKET_ID,
 };
 
@@ -78,7 +74,6 @@ typedef enum {
     EDITING_TARGET_TEMPERATURA_TAVOLO,
     EDITING_TARGET_TEMPERATURA_BRACCIOLO,
     EDITING_TARGET_SOFFIO,
-    EDITING_TARGET_ASPIRAZIONE,
 } editing_target_t;
 
 
@@ -124,19 +119,13 @@ struct page_data {
     lv_obj_t *img_aria_soffio;
     lv_obj_t *img_aria_soffio_popup;
 
-    lv_obj_t *popup_aspirazione;
-    lv_obj_t *slider_aspirazione;
-    lv_obj_t *btn_aspirazione_popup;
     lv_obj_t *img_aria_aspirazione;
-    lv_obj_t *img_aria_aspirazione_popup;
 
     lv_anim_t anim_ventola_aspirazione;
     lv_anim_t anim_ventola_soffio;
-    lv_anim_t anim_ventola_aspirazione_popup;
     lv_anim_t anim_ventola_soffio_popup;
     lv_anim_t anim_popup_tavolo;
     lv_anim_t anim_popup_bracciolo;
-    lv_anim_t anim_popup_ventola_aspirazione;
     lv_anim_t anim_popup_ventola_soffio;
 
     editing_target_t editing_target;
@@ -145,6 +134,8 @@ struct page_data {
     parameter_handle_t setpoint_bracciolo;
 
     uint8_t ignore_click;
+    uint8_t aspirazione_on;
+    uint8_t soffio_on;
 };
 
 
@@ -154,11 +145,9 @@ static lv_obj_t *heat_image_button(lv_obj_t *root, const lv_img_dsc_t *img_dsc, 
                                    size_t row, int id);
 static lv_obj_t *iron_image_button(lv_obj_t *root, const lv_img_dsc_t *img_dsc, size_t col, size_t row, int id);
 static lv_anim_t fan_animation(lv_obj_t *img, uint32_t period);
-static lv_anim_t breathe_animation(lv_obj_t *img, uint32_t period);
 static lv_anim_t slide_in_animation(lv_obj_t *obj, int32_t start, int32_t end);
 static lv_anim_t fade_animation(lv_obj_t *obj);
 static void      update_page(model_t *pmodel, struct page_data *pdata, uint8_t restart_animations);
-static lv_obj_t *popup_create(lv_obj_t *root);
 static lv_obj_t *popup_temperature_create(lv_obj_t *root, lv_obj_t **arc, lv_obj_t **lbl, lv_obj_t **img,
                                           const lv_img_dsc_t *img_dsc, int plus_id, int minus_id);
 static lv_obj_t *popup_fan_create(lv_obj_t *root, lv_obj_t **slider, lv_obj_t **btn_fan, lv_obj_t **img_air,
@@ -190,6 +179,8 @@ static void open_page(model_t *pmodel, void *args) {
 
     pdata->ignore_click   = 0;
     pdata->editing_target = EDITING_TARGET_NONE;
+    pdata->soffio_on      = !model_get_soffio_on(pmodel);
+    pdata->aspirazione_on = !model_get_aspirazione_on(pmodel);
 
 #define COL_SIZE 95
 #define ROW_SIZE 158
@@ -236,6 +227,7 @@ static void open_page(model_t *pmodel, void *args) {
     pdata->img_aria_aspirazione = img;
     pdata->btn_aspirazione      = btn;
     lv_obj_add_flag(pdata->btn_aspirazione, LV_OBJ_FLAG_CHECKABLE);
+    lv_obj_clear_flag(pdata->btn_aspirazione, LV_OBJ_FLAG_CLICKABLE);
 
     pdata->btn_boiler = image_button(cont, &img_boiler_off_3, 2, 1, BOILER_BTN_ID);
     pdata->img_boiler = lv_obj_get_child(pdata->btn_boiler, 0);
@@ -260,7 +252,7 @@ static void open_page(model_t *pmodel, void *args) {
 
     pdata->btn_menu = image_button(cont, &img_menu, 4, 0, MENU_BTN_ID);
 
-    pdata->anim_ventola_aspirazione = fan_animation(pdata->img_ventola_aspirazione, 2000);
+    pdata->anim_ventola_aspirazione = fan_animation(pdata->img_ventola_aspirazione, 250);
 
     pdata->anim_ventola_soffio = fan_animation(pdata->img_ventola_soffio, 2000);
 
@@ -298,26 +290,13 @@ static void open_page(model_t *pmodel, void *args) {
     popup = popup_fan_create(pdata->blanket, &pdata->slider_soffio, &pdata->btn_soffio_popup,
                              &pdata->img_aria_soffio_popup, &pdata->anim_ventola_soffio_popup, &img_aria, 0,
                              FAN_SOFFIO_PLUS_BTN_ID, FAN_SOFFIO_MINUS_BTN_ID);
-    view_register_object_default_callback(pdata->btn_soffio_popup, TOGGLE_FAN_SOFFIO_BTN_ID);
+    view_register_object_default_callback(pdata->btn_soffio_popup, SOFFIO_POPUP_BTN_ID);
     view_register_object_default_callback(pdata->slider_soffio, VELOCITA_SOFFIO_SLIDER_ID);
     pdata->popup_soffio = popup;
 
     lv_obj_align(popup, LV_ALIGN_TOP_MID, 0, -FAN_POPUP_HEIGHT);
     pdata->anim_popup_ventola_soffio =
         slide_in_animation(popup, -FAN_POPUP_HEIGHT, (LV_VER_RES - FAN_POPUP_HEIGHT) / 2);
-
-
-    popup = popup_fan_create(pdata->blanket, &pdata->slider_aspirazione, &pdata->btn_aspirazione_popup,
-                             &pdata->img_aria_aspirazione_popup, &pdata->anim_ventola_aspirazione_popup, &img_aria, 1,
-                             FAN_ASPIRAZIONE_PLUS_BTN_ID, FAN_ASPIRAZIONE_MINUS_BTN_ID);
-    view_register_object_default_callback(pdata->btn_aspirazione_popup, TOGGLE_FAN_ASPIRAZIONE_BTN_ID);
-    view_register_object_default_callback(pdata->slider_aspirazione, VELOCITA_ASPIRAZIONE_SLIDER_ID);
-    pdata->popup_aspirazione = popup;
-
-    lv_obj_align(popup, LV_ALIGN_TOP_MID, 0, -POPUP_HEIGHT);
-    pdata->anim_popup_ventola_aspirazione =
-        slide_in_animation(popup, -FAN_POPUP_HEIGHT, (LV_VER_RES - FAN_POPUP_HEIGHT) / 2);
-
 
     update_page(pmodel, pdata, 1);
 }
@@ -418,22 +397,6 @@ static view_message_t page_event(model_t *pmodel, void *args, view_event_t event
                             update_page(pmodel, pdata, 1);
                             break;
 
-                        case FAN_ASPIRAZIONE_PLUS_BTN_ID:
-                            if (model_get_velocita_aspirazione(pmodel) < NUM_SPEED_STEPS - 1) {
-                                model_set_velocita_aspirazione(pmodel, model_get_velocita_aspirazione(pmodel) + 1);
-                            }
-                            msg.beep = 1;
-                            update_page(pmodel, pdata, 1);
-                            break;
-
-                        case FAN_ASPIRAZIONE_MINUS_BTN_ID:
-                            if (model_get_velocita_aspirazione(pmodel) > 0) {
-                                model_set_velocita_aspirazione(pmodel, model_get_velocita_aspirazione(pmodel) - 1);
-                            }
-                            msg.beep = 1;
-                            update_page(pmodel, pdata, 1);
-                            break;
-
                         case BLANKET_ID:
                             pdata->editing_target = EDITING_TARGET_NONE;
                             update_page(pmodel, pdata, 1);
@@ -443,15 +406,6 @@ static view_message_t page_event(model_t *pmodel, void *args, view_event_t event
                             if (pdata->editing_target == EDITING_TARGET_NONE) {
                                 pdata->editing_target = EDITING_TARGET_SOFFIO;
                                 lv_anim_start(&pdata->anim_popup_ventola_soffio);
-                                update_page(pmodel, pdata, 1);
-                                msg.beep = 1;
-                            }
-                            break;
-
-                        case ASPIRAZIONE_BTN_ID:
-                            if (pdata->editing_target == EDITING_TARGET_NONE) {
-                                pdata->editing_target = EDITING_TARGET_ASPIRAZIONE;
-                                lv_anim_start(&pdata->anim_popup_ventola_aspirazione);
                                 update_page(pmodel, pdata, 1);
                                 msg.beep = 1;
                             }
@@ -554,23 +508,8 @@ static view_message_t page_event(model_t *pmodel, void *args, view_event_t event
                             update_page(pmodel, pdata, 0);
                             break;
 
-                        case TOGGLE_FAN_SOFFIO_BTN_ID:
-                            model_toggle_soffio(pmodel);
-                            update_page(pmodel, pdata, 1);
-                            break;
-
-                        case TOGGLE_FAN_ASPIRAZIONE_BTN_ID:
-                            model_toggle_aspirazione(pmodel);
-                            update_page(pmodel, pdata, 1);
-                            break;
-
                         case VELOCITA_SOFFIO_SLIDER_ID:
                             model_set_velocita_soffio(pmodel, event.value);
-                            update_page(pmodel, pdata, 1);
-                            break;
-
-                        case VELOCITA_ASPIRAZIONE_SLIDER_ID:
-                            model_set_velocita_aspirazione(pmodel, event.value);
                             update_page(pmodel, pdata, 1);
                             break;
                     }
@@ -582,6 +521,7 @@ static view_message_t page_event(model_t *pmodel, void *args, view_event_t event
                         case TAVOLO_BTN_ID:
                         case BRACCIOLO_BTN_ID:
                         case SOFFIO_BTN_ID:
+                        case SOFFIO_POPUP_BTN_ID:
                         case ASPIRAZIONE_BTN_ID:
                             update_page(pmodel, pdata, 0);
                             break;
@@ -608,7 +548,7 @@ static void update_page(model_t *pmodel, struct page_data *pdata, uint8_t restar
         lv_anim_set_time(&pdata->anim_ventola_soffio, speed_to_period_transform[model_get_velocita_soffio(pmodel)]);
         lv_anim_set_time(&pdata->anim_ventola_soffio_popup,
                          speed_to_period_transform[model_get_velocita_soffio(pmodel)]);
-        if (restart_animations) {
+        if (!pdata->soffio_on || restart_animations) {
             lv_anim_start(&pdata->anim_ventola_soffio);
             lv_anim_start(&pdata->anim_ventola_soffio_popup);
         }
@@ -616,6 +556,7 @@ static void update_page(model_t *pmodel, struct page_data *pdata, uint8_t restar
         view_common_set_checked(pdata->btn_soffio_popup, 1);
         view_common_img_set_src(pdata->img_aria_soffio, &img_aria_on);
         view_common_img_set_src(pdata->img_aria_soffio_popup, &img_aria_on);
+        pdata->soffio_on = 1;
     } else {
         lv_anim_custom_del(&pdata->anim_ventola_soffio, NULL);
         lv_anim_custom_del(&pdata->anim_ventola_soffio_popup, NULL);
@@ -623,28 +564,21 @@ static void update_page(model_t *pmodel, struct page_data *pdata, uint8_t restar
         view_common_set_checked(pdata->btn_soffio_popup, 0);
         view_common_img_set_src(pdata->img_aria_soffio, &img_aria);
         view_common_img_set_src(pdata->img_aria_soffio_popup, &img_aria);
+        pdata->soffio_on = 0;
     }
 
     if (model_get_aspirazione_on(pmodel)) {
-        lv_anim_set_time(&pdata->anim_ventola_aspirazione,
-                         speed_to_period_transform[model_get_velocita_aspirazione(pmodel)]);
-        lv_anim_set_time(&pdata->anim_ventola_aspirazione_popup,
-                         speed_to_period_transform[model_get_velocita_aspirazione(pmodel)]);
-        if (restart_animations) {
+        if (!pdata->aspirazione_on || restart_animations) {
             lv_anim_start(&pdata->anim_ventola_aspirazione);
-            lv_anim_start(&pdata->anim_ventola_aspirazione_popup);
         }
         view_common_set_checked(pdata->btn_aspirazione, 1);
-        view_common_set_checked(pdata->btn_aspirazione_popup, 1);
         view_common_img_set_src(pdata->img_aria_aspirazione, &img_aria_on);
-        view_common_img_set_src(pdata->img_aria_aspirazione_popup, &img_aria_on);
+        pdata->aspirazione_on = 1;
     } else {
         lv_anim_custom_del(&pdata->anim_ventola_aspirazione, NULL);
-        lv_anim_custom_del(&pdata->anim_ventola_aspirazione_popup, NULL);
         view_common_set_checked(pdata->btn_aspirazione, 0);
-        view_common_set_checked(pdata->btn_aspirazione_popup, 0);
         view_common_img_set_src(pdata->img_aria_aspirazione, &img_aria);
-        view_common_img_set_src(pdata->img_aria_aspirazione_popup, &img_aria);
+        pdata->aspirazione_on = 0;
     }
 
     view_common_set_checked(pdata->btn_luce, model_get_luce(pmodel));
@@ -696,7 +630,6 @@ static void update_page(model_t *pmodel, struct page_data *pdata, uint8_t restar
             view_common_set_hidden(pdata->popup_bracciolo, 0);
             view_common_set_hidden(pdata->popup_tavolo, 1);
             view_common_set_hidden(pdata->popup_soffio, 1);
-            view_common_set_hidden(pdata->popup_aspirazione, 1);
 
             pause_background_animations(pdata);
 
@@ -711,7 +644,6 @@ static void update_page(model_t *pmodel, struct page_data *pdata, uint8_t restar
             view_common_set_hidden(pdata->popup_bracciolo, 1);
             view_common_set_hidden(pdata->popup_tavolo, 0);
             view_common_set_hidden(pdata->popup_soffio, 1);
-            view_common_set_hidden(pdata->popup_aspirazione, 1);
 
             pause_background_animations(pdata);
 
@@ -725,23 +657,10 @@ static void update_page(model_t *pmodel, struct page_data *pdata, uint8_t restar
             view_common_set_hidden(pdata->popup_bracciolo, 1);
             view_common_set_hidden(pdata->popup_tavolo, 1);
             view_common_set_hidden(pdata->popup_soffio, 0);
-            view_common_set_hidden(pdata->popup_aspirazione, 1);
 
             pause_background_animations(pdata);
 
             lv_slider_set_value(pdata->slider_soffio, model_get_velocita_soffio(pmodel), LV_ANIM_OFF);
-            break;
-
-        case EDITING_TARGET_ASPIRAZIONE:
-            view_common_set_hidden(pdata->blanket, 0);
-            view_common_set_hidden(pdata->popup_bracciolo, 1);
-            view_common_set_hidden(pdata->popup_tavolo, 1);
-            view_common_set_hidden(pdata->popup_soffio, 1);
-            view_common_set_hidden(pdata->popup_aspirazione, 0);
-
-            pause_background_animations(pdata);
-
-            lv_slider_set_value(pdata->slider_aspirazione, model_get_velocita_aspirazione(pmodel), LV_ANIM_OFF);
             break;
     }
 }
@@ -827,27 +746,6 @@ static lv_obj_t *image_button(lv_obj_t *root, const lv_img_dsc_t *img_dsc, size_
     lv_obj_center(img);
 
     return btn;
-}
-
-
-static lv_obj_t *popup_create(lv_obj_t *root) {
-    lv_obj_t *cont = lv_obj_create(root);
-    lv_obj_clear_flag(cont, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_add_style(cont, (lv_style_t *)&style_popup, LV_STATE_DEFAULT);
-    lv_obj_set_size(cont, POPUP_WIDTH, POPUP_HEIGHT);
-    lv_obj_center(cont);
-
-    lv_obj_t *btn = lv_btn_create(cont);
-    lv_obj_add_style(btn, (lv_style_t *)&style_config_btn, LV_STATE_DEFAULT);
-    lv_obj_set_size(btn, 48, 48);
-    lv_obj_t *lbl = lv_label_create(btn);
-    lv_obj_set_style_text_font(lbl, STYLE_FONT_BIG, LV_STATE_DEFAULT);
-    lv_label_set_text(lbl, LV_SYMBOL_CLOSE);
-    lv_obj_center(lbl);
-    lv_obj_align(btn, LV_ALIGN_TOP_RIGHT, 0, 0);
-    view_register_object_default_callback(btn, BLANKET_ID);
-
-    return cont;
 }
 
 
@@ -967,6 +865,7 @@ static lv_obj_t *popup_fan_create(lv_obj_t *root, lv_obj_t **slider, lv_obj_t **
     lv_obj_add_style(*btn_fan, (lv_style_t *)&style_black_border, LV_STATE_DEFAULT);
     lv_obj_add_flag(*btn_fan, LV_OBJ_FLAG_CHECKABLE);
     lv_obj_add_style(*btn_fan, (lv_style_t *)&style_btn_checked, LV_STATE_CHECKED);
+    lv_obj_clear_flag(*btn_fan, LV_OBJ_FLAG_CLICKABLE);
 
     lv_obj_t *img_fan = lv_img_create(*btn_fan);
     lv_img_set_src(img_fan, &img_ventola);
@@ -1028,7 +927,7 @@ static lv_obj_t *popup_fan_create(lv_obj_t *root, lv_obj_t **slider, lv_obj_t **
     lv_obj_align(btn, LV_ALIGN_RIGHT_MID, 0, 96);
     view_register_object_default_callback(btn, minus_id);
 
-    *anim = fan_animation(img_fan, 1000);
+    *anim = fan_animation(img_fan, 250);
 
     return cont;
 }
@@ -1078,36 +977,6 @@ static lv_anim_t fade_animation(lv_obj_t *obj) {
      *------------------*/
     /*Number of repetitions. Default is 1. LV_ANIM_REPEAT_INFINITE for infinite repetition*/
     lv_anim_set_repeat_count(&a, LV_ANIM_REPEAT_INFINITE);
-    return a;
-}
-
-
-
-static lv_anim_t breathe_animation(lv_obj_t *img, uint32_t period) {
-    lv_anim_t a;
-    lv_anim_init(&a);
-    /*Set the "animator" function*/
-    lv_anim_set_exec_cb(&a, (lv_anim_exec_xcb_t)lv_img_set_zoom);
-    /* Ease out animation */
-    lv_anim_set_path_cb(&a, lv_anim_path_ease_out);
-    /*Set target of the animation*/
-    lv_anim_set_var(&a, img);
-    /*Length of the animation [ms]*/
-    lv_anim_set_time(&a, period);
-    /*Set start and end values. E.g. 0, 150*/
-    lv_anim_set_values(&a, 200, 300);
-    /* OPTIONAL SETTINGS
-     *------------------*/
-    /*Time to wait before starting the animation [ms]*/
-    lv_anim_set_delay(&a, 500);
-    /*Number of repetitions. Default is 1. LV_ANIM_REPEAT_INFINITE for infinite repetition*/
-    lv_anim_set_repeat_count(&a, LV_ANIM_REPEAT_INFINITE);
-    /*When ready, play the animation backward with this duration. Default is 0 (disabled) [ms]*/
-    lv_anim_set_playback_time(&a, period);
-    /*Delay before playback. Default is 0 (disabled) [ms]*/
-    lv_anim_set_playback_delay(&a, 500);
-    /* START THE ANIMATION
-     *------------------*/
     return a;
 }
 

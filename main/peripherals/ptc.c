@@ -11,7 +11,7 @@
 #include "esp_err.h"
 
 
-#define MINIMUM_AD_VALUE   1061L
+#define MINIMUM_AD_VALUE   500L
 #define MAXIMUM_AD_VALUE   2049L
 #define MINIMUM_TEMP_VALUE -10L
 #define MAXIMUM_TEMP_VALUE 140L

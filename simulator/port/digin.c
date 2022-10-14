@@ -7,7 +7,14 @@ uint8_t digin_have_changed(void) {
 
 
 uint8_t digin_read(digin_t digin) {
-    return 0;
+    switch (digin) {
+        case DIGIN_PEDALE:
+            return 0;
+        case DIGIN_FOTOCELLULA_DX:
+            return 1;
+        default:
+            return 0;
+    }
 }
 
 

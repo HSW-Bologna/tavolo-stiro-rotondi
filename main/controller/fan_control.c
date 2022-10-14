@@ -1,76 +1,99 @@
 #include "model/model.h"
-#include "utils/utils.h"
-#include "gel/state_machine/state_machine.h"
-#include "gel/timer/timecheck.h"
-#include "gel/timer/timer.h"
-#include "app_config.h"
+#include "peripherals/digin.h"
+#include "peripherals/phase_cut.h"
 #include "esp_log.h"
-#include "view/view.h"
-#include "fan_control.h"
-#include "peripherals/digout.h"
+#include "gel/timer/timecheck.h"
+#include "utils/utils.h"
+
+
+#define PHASE_CUT_SOFFIO      PHASE_CUT_FAN_1
+#define PHASE_CUT_ASPIRAZIONE PHASE_CUT_FAN_2
 
 
 typedef enum {
-    FAN_SM_STATE_OFF = 0,
-    FAN_SM_STATE_SOFFIO,
-    FAN_SM_STATE_ASPIRAZIONE,
-} fan_control_sm_state_t;
+    STATE_NO_FOTOCELLULA = 0,
+    STATE_WAITING_FOR_FOTOCELLULA,
+    STATE_ASPIRAZIONE,
+    STATE_SOFFIO,
+} state_t;
 
 
-typedef enum {
-    FAN_CONTROL_EVENT_FOTOCELLULA_ON,
-    FAN_CONTROL_EVENT_FOTOCELLULA_OFF,
-    FAN_CONTROL_EVENT_PEDALE_ON,
-    FAN_CONTROL_EVENT_PEDALE_OFF,
-} fan_control_event_t;
+static const char *TAG = "Fan control";
+
+static unsigned long timestamp = 0;     // TODO: change this into a proper state machine
+static state_t       state     = STATE_NO_FOTOCELLULA;
 
 
-DEFINE_STATE_MACHINE(fan_control, fan_control_event_t, model_t);
+void fan_control(model_t *pmodel) {
 
+    uint8_t fotocellula = digin_read(DIGIN_FOTOCELLULA_DX);
+    uint8_t pedale      = digin_read(DIGIN_PEDALE);
 
-static int off_event_manager(model_t *pmodel, fan_control_event_t event);
-static int soffio_event_manager(model_t *pmodel, fan_control_event_t event);
-static int aspirazione_event_manager(model_t *pmodel, fan_control_event_t event);
+    switch (state) {
+        case STATE_NO_FOTOCELLULA:
+            if (fotocellula && !pedale) {
+                state = STATE_WAITING_FOR_FOTOCELLULA;
+            } else if (pedale) {
+                state = STATE_SOFFIO;
+            } else {
+                timestamp = get_millis();
+            }
+            break;
 
+        case STATE_WAITING_FOR_FOTOCELLULA:
+            if (fotocellula && !pedale) {
+                if (is_expired(timestamp, get_millis(), 300UL)) {
+                    state     = STATE_ASPIRAZIONE;
+                    timestamp = get_millis();
+                }
+            } else if (pedale) {
+                state = STATE_SOFFIO;
+            } else {
+                state = STATE_NO_FOTOCELLULA;
+            }
+            break;
 
-static fan_control_event_manager_t managers[] = {
-    [FAN_SM_STATE_OFF]         = off_event_manager,
-    [FAN_SM_STATE_SOFFIO]      = soffio_event_manager,
-    [FAN_SM_STATE_ASPIRAZIONE] = aspirazione_event_manager,
-};
+        case STATE_ASPIRAZIONE:
+            if (fotocellula && !pedale) {
+            } else if (pedale) {
+                state = STATE_SOFFIO;
+            } else {
+                state = STATE_NO_FOTOCELLULA;
+            }
+            break;
 
-static fan_control_state_machine_t sm = {
-    .state    = FAN_SM_STATE_OFF,
-    .managers = managers,
-};
-
-
-static int off_event_manager(model_t *pmodel, fan_control_event_t event) {
-    switch (event) {
-        default:
-            return -1;
+        case STATE_SOFFIO:
+            if (fotocellula && !pedale) {
+                state     = STATE_NO_FOTOCELLULA;
+                timestamp = get_millis();
+            } else if (pedale) {
+            } else {
+                state = STATE_NO_FOTOCELLULA;
+            }
+            break;
     }
 
-    return -1;
-}
+    switch (state) {
+        case STATE_WAITING_FOR_FOTOCELLULA:
+        case STATE_NO_FOTOCELLULA:
+            model_set_aspirazione_on(pmodel, 0);
+            model_set_soffio_on(pmodel, 0);
+            break;
 
+        case STATE_ASPIRAZIONE:
+            model_set_aspirazione_on(pmodel, 1);
+            model_set_soffio_on(pmodel, 0);
+            break;
 
-static int soffio_event_manager(model_t *pmodel, fan_control_event_t event) {
-    switch (event) {
-        default:
-            return -1;
+        case STATE_SOFFIO:
+            model_set_aspirazione_on(pmodel, 0);
+            model_set_soffio_on(pmodel, 1);
+            break;
     }
 
-    return -1;
-}
 
-
-
-static int aspirazione_event_manager(model_t *pmodel, fan_control_event_t event) {
-    switch (event) {
-        default:
-            return -1;
+    if (!model_get_test(pmodel)) {
+        phase_cut_set_percentage(PHASE_CUT_ASPIRAZIONE, model_get_percentuale_aspirazione(pmodel));
+        phase_cut_set_percentage(PHASE_CUT_SOFFIO, model_get_percentuale_soffio(pmodel));
     }
-
-    return -1;
 }

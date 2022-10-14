@@ -62,9 +62,7 @@ typedef struct {
         uint16_t max_temperatura_tavolo;
         uint16_t max_temperatura_bracciolo;
         uint8_t  velocita_soffio;
-        uint8_t  velocita_aspirazione;
         uint8_t  percentuali_soffio[NUM_SPEED_STEPS];
-        uint8_t  percentuali_aspirazione[NUM_SPEED_STEPS];
         uint16_t isteresi_tavolo;
         uint16_t isteresi_bracciolo;
         uint8_t  numero_sonde;
@@ -110,6 +108,7 @@ uint8_t  model_should_deactivate_table(model_t *pmodel);
 uint8_t  model_should_activate_arm(model_t *pmodel);
 uint8_t  model_should_deactivate_arm(model_t *pmodel);
 uint8_t  model_liquid_threshold_1_reached(model_t *pmodel);
+uint8_t  model_liquid_threshold_2_reached(model_t *pmodel);
 
 GETTERNSETTER(test, run.test);
 
@@ -122,14 +121,13 @@ GETTER(max_temperatura_tavolo, configuration.max_temperatura_tavolo);
 GETTER(max_temperatura_bracciolo, configuration.max_temperatura_bracciolo);
 GETTER(isteresi_tavolo, configuration.isteresi_tavolo);
 GETTER(isteresi_bracciolo, configuration.isteresi_bracciolo);
-GETTER(soffio_on, run.soffio_on);
-GETTER(aspirazione_on, run.aspirazione_on);
 GETTER(richiesta_boiler, run.richiesta_boiler);
 
+GETTERNSETTER(soffio_on, run.soffio_on);
+GETTERNSETTER(aspirazione_on, run.aspirazione_on);
 GETTERNSETTER(setpoint_temperatura_tavolo, configuration.setpoint_temperatura_tavolo);
 GETTERNSETTER(setpoint_temperatura_bracciolo, configuration.setpoint_temperatura_bracciolo);
 GETTERNSETTER(velocita_soffio, configuration.velocita_soffio);
-GETTERNSETTER(velocita_aspirazione, configuration.velocita_aspirazione);
 GETTERNSETTER(numero_sonde, configuration.numero_sonde);
 GETTERNSETTER(temperatura_tavolo, run.temperatura_tavolo);
 GETTERNSETTER(temperatura_bracciolo, run.temperatura_bracciolo);

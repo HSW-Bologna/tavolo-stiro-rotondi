@@ -5,8 +5,8 @@
  * Definizioni dei pin da utilizzare
  */
 
-#define HAP_ASP GPIO_NUM_26
-#define HAP_SOFF GPIO_NUM_25
+#define HAP_ASP GPIO_NUM_25
+#define HAP_SOFF GPIO_NUM_26
 #define HAP_INT0 GPIO_NUM_35
 
 #define HAP_TEMP1 ADC2_CHANNEL_5

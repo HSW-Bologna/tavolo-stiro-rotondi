@@ -7,7 +7,7 @@
 
 
 #define ADC_PROBE_1_THRESHOLD 2048
-#define ADC_PROBE_2_THRESHOLD 2048
+#define ADC_PROBE_2_THRESHOLD 600
 
 
 static const char *TAG = "Model";
@@ -39,29 +39,20 @@ void model_init(model_t *pmodel) {
     pmodel->configuration.setpoint_temperatura_tavolo    = 50;
     pmodel->configuration.setpoint_temperatura_bracciolo = 50;
     pmodel->configuration.velocita_soffio                = NUM_SPEED_STEPS - 1;
-    pmodel->configuration.velocita_aspirazione           = NUM_SPEED_STEPS - 1;
     pmodel->configuration.isteresi_tavolo                = 2;
     pmodel->configuration.isteresi_bracciolo             = 2;
     pmodel->configuration.numero_sonde                   = 1;
 
     pmodel->configuration.fotocellula = FOTOCELLULA_SX;
 
-    pmodel->configuration.percentuali_soffio[0]      = 20;
-    pmodel->configuration.percentuali_aspirazione[0] = 20;
-    pmodel->configuration.percentuali_soffio[1]      = 30;
-    pmodel->configuration.percentuali_aspirazione[1] = 30;
-    pmodel->configuration.percentuali_soffio[2]      = 40;
-    pmodel->configuration.percentuali_aspirazione[2] = 40;
-    pmodel->configuration.percentuali_soffio[3]      = 45;
-    pmodel->configuration.percentuali_aspirazione[3] = 45;
-    pmodel->configuration.percentuali_soffio[4]      = 50;
-    pmodel->configuration.percentuali_aspirazione[4] = 50;
-    pmodel->configuration.percentuali_soffio[5]      = 60;
-    pmodel->configuration.percentuali_aspirazione[5] = 60;
-    pmodel->configuration.percentuali_soffio[6]      = 80;
-    pmodel->configuration.percentuali_aspirazione[6] = 80;
-    pmodel->configuration.percentuali_soffio[7]      = 100;
-    pmodel->configuration.percentuali_aspirazione[7] = 100;
+    pmodel->configuration.percentuali_soffio[0] = 20;
+    pmodel->configuration.percentuali_soffio[1] = 30;
+    pmodel->configuration.percentuali_soffio[2] = 40;
+    pmodel->configuration.percentuali_soffio[3] = 45;
+    pmodel->configuration.percentuali_soffio[4] = 50;
+    pmodel->configuration.percentuali_soffio[5] = 60;
+    pmodel->configuration.percentuali_soffio[6] = 80;
+    pmodel->configuration.percentuali_soffio[7] = 100;
 
     memset(pmodel->test.inputs, 0, sizeof(pmodel->test.inputs));
     pmodel->test.adc_ptc_1  = 0;
@@ -97,11 +88,7 @@ uint8_t model_get_percentuale_soffio(model_t *pmodel) {
 
 uint8_t model_get_percentuale_aspirazione(model_t *pmodel) {
     assert(pmodel != NULL);
-    if (model_get_aspirazione_on(pmodel)) {
-        return pmodel->configuration.percentuali_aspirazione[model_get_velocita_aspirazione(pmodel)];
-    } else {
-        return 0;
-    }
+    return model_get_aspirazione_on(pmodel) ? 100 : 0;
 }
 
 
@@ -158,4 +145,10 @@ uint8_t model_should_deactivate_arm(model_t *pmodel) {
 uint8_t model_liquid_threshold_1_reached(model_t *pmodel) {
     assert(pmodel != NULL);
     return model_get_adc_level_1(pmodel) < ADC_PROBE_1_THRESHOLD;
+}
+
+
+uint8_t model_liquid_threshold_2_reached(model_t *pmodel) {
+    assert(pmodel != NULL);
+    return model_get_adc_level_2(pmodel) < ADC_PROBE_2_THRESHOLD;
 }

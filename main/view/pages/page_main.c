@@ -24,6 +24,10 @@ LV_IMG_DECLARE(img_ferro_1_on);
 LV_IMG_DECLARE(img_ferro_2_on);
 LV_IMG_DECLARE(img_aria);
 LV_IMG_DECLARE(img_aria_on);
+LV_IMG_DECLARE(img_boiler_off_0);
+LV_IMG_DECLARE(img_boiler_off_1);
+LV_IMG_DECLARE(img_boiler_off_2);
+LV_IMG_DECLARE(img_boiler_on_2);
 LV_IMG_DECLARE(img_boiler_off_3);
 LV_IMG_DECLARE(img_boiler_on_3);
 LV_IMG_DECLARE(img_fotocellula_sx);
@@ -36,6 +40,8 @@ LV_IMG_DECLARE(img_bracciolo_on);
 LV_IMG_DECLARE(img_tavolo_off);
 LV_IMG_DECLARE(img_tavolo_on);
 LV_IMG_DECLARE(img_ventola);
+LV_IMG_DECLARE(img_bolle_2);
+LV_IMG_DECLARE(img_bolle_3);
 
 #define ANIM_VAPORE_PERIOD 1200
 #define POPUP_WIDTH        360
@@ -102,6 +108,7 @@ struct page_data {
     lv_obj_t *img_calore_tavolo;
     lv_obj_t *img_calore_bracciolo;
     lv_obj_t *img_boiler;
+    lv_obj_t *img_boiler_bubbles;
 
     lv_obj_t *blanket;
 
@@ -231,6 +238,20 @@ static void open_page(model_t *pmodel, void *args) {
 
     pdata->btn_boiler = image_button(cont, &img_boiler_off_3, 2, 1, BOILER_BTN_ID);
     pdata->img_boiler = lv_obj_get_child(pdata->btn_boiler, 0);
+
+    static const lv_img_dsc_t *anim_imgs[3] = {
+        &img_bolle_2,
+        &img_bolle_3,
+    };
+
+    img = lv_animimg_create(pdata->img_boiler);
+    lv_animimg_set_src(img, (lv_img_dsc_t **)anim_imgs, 2);
+    lv_animimg_set_duration(img, 1500);
+    lv_animimg_set_repeat_count(img, LV_ANIM_REPEAT_INFINITE);
+    lv_obj_align(img, LV_ALIGN_CENTER, 0, 0);
+    lv_animimg_start(img);
+    pdata->img_boiler_bubbles = img;
+
     lv_obj_add_flag(pdata->btn_boiler, LV_OBJ_FLAG_CHECKABLE);
 
     btn = base_button(cont, 3, 0, SOFFIO_BTN_ID);
@@ -312,10 +333,10 @@ static view_message_t page_event(model_t *pmodel, void *args, view_event_t event
             break;
 
         case VIEW_EVENT_CODE_VAPORE:
-            lv_obj_set_style_opa(pdata->img_vapore_ferro_1, LV_OPA_COVER, 0);
+            lv_obj_set_style_opa(pdata->img_vapore_ferro_1, LV_OPA_COVER, LV_STATE_DEFAULT);
             lv_obj_fade_out(pdata->img_vapore_ferro_1, ANIM_VAPORE_PERIOD, 0);
             lv_animimg_start(pdata->img_vapore_ferro_1);
-            lv_obj_set_style_opa(pdata->img_vapore_ferro_2, LV_OPA_COVER, 0);
+            lv_obj_set_style_opa(pdata->img_vapore_ferro_2, LV_OPA_COVER, LV_STATE_DEFAULT);
             lv_obj_fade_out(pdata->img_vapore_ferro_2, ANIM_VAPORE_PERIOD, 0);
             lv_animimg_start(pdata->img_vapore_ferro_2);
             break;
@@ -601,11 +622,13 @@ static void update_page(model_t *pmodel, struct page_data *pdata, uint8_t restar
     view_common_img_set_src(pdata->img_ferro_2, model_get_ferro_2(pmodel) ? &img_ferro_2_on : &img_ferro_2_off);
 
     view_common_set_checked(pdata->btn_boiler, model_get_richiesta_boiler(pmodel));
-    if (model_get_boiler_on(pmodel)) {
-        view_common_img_set_src(pdata->img_boiler, &img_boiler_on_3);
+    if (model_boiler_pieno(pmodel)) {
+        view_common_img_set_src(pdata->img_boiler, model_get_boiler_on(pmodel) ? &img_boiler_on_2 : &img_boiler_off_2);
     } else {
-        view_common_img_set_src(pdata->img_boiler, &img_boiler_off_3);
+        view_common_img_set_src(pdata->img_boiler, model_get_pompa_on(pmodel) ? &img_boiler_off_1 : &img_boiler_off_0);
     }
+
+    view_common_set_hidden(pdata->img_boiler_bubbles, !model_get_pompa_on(pmodel));
 
     switch (pdata->editing_target) {
         case EDITING_TARGET_NONE:

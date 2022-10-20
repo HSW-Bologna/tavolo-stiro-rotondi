@@ -108,7 +108,7 @@ uint8_t  model_should_deactivate_table(model_t *pmodel);
 uint8_t  model_should_activate_arm(model_t *pmodel);
 uint8_t  model_should_deactivate_arm(model_t *pmodel);
 uint8_t  model_liquid_threshold_1_reached(model_t *pmodel);
-uint8_t  model_liquid_threshold_2_reached(model_t *pmodel);
+uint8_t  model_boiler_pieno(model_t *pmodel);
 
 GETTERNSETTER(test, run.test);
 

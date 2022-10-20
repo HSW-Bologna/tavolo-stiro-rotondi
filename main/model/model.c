@@ -7,7 +7,7 @@
 
 
 #define ADC_PROBE_1_THRESHOLD 2048
-#define ADC_PROBE_2_THRESHOLD 600
+#define ADC_PROBE_2_THRESHOLD 1000
 
 
 static const char *TAG = "Model";
@@ -29,6 +29,7 @@ void model_init(model_t *pmodel) {
     pmodel->run.tavolo_on                       = 0;
     pmodel->run.bracciolo_on                    = 0;
     pmodel->run.boiler_on                       = 0;
+    pmodel->run.pompa_on                        = 0;
     pmodel->run.richiesta_temperatura_tavolo    = 0;
     pmodel->run.richiesta_temperatura_bracciolo = 0;
     pmodel->run.richiesta_boiler                = 0;
@@ -47,11 +48,11 @@ void model_init(model_t *pmodel) {
 
     pmodel->configuration.percentuali_soffio[0] = 20;
     pmodel->configuration.percentuali_soffio[1] = 30;
-    pmodel->configuration.percentuali_soffio[2] = 40;
-    pmodel->configuration.percentuali_soffio[3] = 45;
-    pmodel->configuration.percentuali_soffio[4] = 50;
-    pmodel->configuration.percentuali_soffio[5] = 60;
-    pmodel->configuration.percentuali_soffio[6] = 80;
+    pmodel->configuration.percentuali_soffio[2] = 35;
+    pmodel->configuration.percentuali_soffio[3] = 40;
+    pmodel->configuration.percentuali_soffio[4] = 45;
+    pmodel->configuration.percentuali_soffio[5] = 50;
+    pmodel->configuration.percentuali_soffio[6] = 60;
     pmodel->configuration.percentuali_soffio[7] = 100;
 
     memset(pmodel->test.inputs, 0, sizeof(pmodel->test.inputs));
@@ -148,7 +149,7 @@ uint8_t model_liquid_threshold_1_reached(model_t *pmodel) {
 }
 
 
-uint8_t model_liquid_threshold_2_reached(model_t *pmodel) {
+uint8_t model_boiler_pieno(model_t *pmodel) {
     assert(pmodel != NULL);
     return model_get_adc_level_2(pmodel) < ADC_PROBE_2_THRESHOLD;
 }

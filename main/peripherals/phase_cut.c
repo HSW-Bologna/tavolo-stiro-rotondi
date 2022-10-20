@@ -10,16 +10,11 @@
 
 static void zcross_isr_handler(void *arg);
 
-static volatile uint32_t period1  = 0;
-static volatile uint32_t period2  = 0;
-static volatile uint32_t counter1 = {0};
-static volatile uint32_t counter2 = {0};
-static volatile size_t   triac_1  = 0;
-static volatile size_t   triac_2  = 0;
-static uint8_t           full1    = 0;
-static uint8_t           full2    = 0;
-static uint8_t           off1     = 0;
-static uint8_t           off2     = 0;
+static volatile uint32_t period  = 0;
+static volatile uint32_t counter = 0;
+static volatile size_t   triac   = 0;
+static uint8_t           full    = 0;
+static uint8_t           off     = 0;
 
 static const char *TAG = "Phase cut";
 
@@ -43,49 +38,28 @@ static const uint16_t sine_percentage_linearization[100] = {
 };
 
 
-static bool IRAM_ATTR timer_phasecut_callback(void *args) {
+
+static bool timer_phasecut_callback(void *args) {
     (void)args;
 
-    if (triac_1 > 0) {
-        triac_1--;
-        if (triac_1 == 0) {
-            gpio_set_level(HAP_ASP, 0);
-        }
-    }
-
-    if (triac_2 > 0) {
-        triac_2--;
-        if (triac_2 == 0) {
+    if (triac > 0) {
+        triac--;
+        if (triac == 0) {
             gpio_set_level(HAP_SOFF, 0);
         }
     }
 
-    if (counter1 > 0) {
-        if (counter1 > 100) {
-            counter1 -= 100;
+    if (counter > 0) {
+        if (counter > 100) {
+            counter -= 100;
         } else {
-            counter1 = 0;
+            counter = 0;
         }
-        if (counter1 == 0 && !off1) {
-            gpio_set_level(HAP_ASP, 1);
-            triac_1 = 5;
-        }
-    }
-
-    if (counter2 > 0) {
-        if (counter2 > 100) {
-            counter2 -= 100;
-        } else {
-            counter2 = 0;
-        }
-        if (counter2 == 0 && !off2) {
+        if (counter == 0 && !off) {
             gpio_set_level(HAP_SOFF, 1);
-            triac_2 = 5;
+            triac = 5;
         }
     }
-
-
-
 
     return 0;
 }
@@ -147,47 +121,36 @@ void phase_cut_init(void) {
     gpio_config(&io_conf_output);
 
     // install gpio isr service
-    gpio_install_isr_service(ESP_INTR_FLAG_IRAM);
+    gpio_install_isr_service(0);
     // hook isr handler for specific gpio pin
     gpio_isr_handler_add(HAP_INT0, zcross_isr_handler, NULL);
 }
 
 
-void phase_cut_set_percentage(phase_cut_fan_t fan, unsigned int perc) {
-    uint8_t           *fulls[]   = {&full1, &full2};
-    uint8_t           *offs[]    = {&off1, &off2};
-    uint32_t volatile *periods[] = {&period1, &period2};
-
+void phase_cut_set_percentage(unsigned int perc) {
     if (perc >= 100) {
-        perc        = 100;
-        *fulls[fan] = 1;
-        *offs[fan]  = 0;
+        perc = 100;
+        full = 1;
+        off  = 0;
     } else if (perc == 0) {
-        *fulls[fan] = 0;
-        *offs[fan]  = 1;
+        full = 0;
+        off  = 1;
     } else {
-        *fulls[fan]   = 0;
-        *offs[fan]    = 0;
-        *periods[fan] = sine_percentage_linearization[perc - 1];
+        full   = 0;
+        off    = 0;
+        period = sine_percentage_linearization[perc - 1];
     }
 
-    ESP_LOGD(TAG, "%i %i %i %i %i %i", fan, perc, off1, off2, full1, full2);
+    ESP_LOGD(TAG, "%i %i %i", perc, off, full);
 }
 
 
-static void IRAM_ATTR zcross_isr_handler(void *arg) {
-    if (off1) {
+static void zcross_isr_handler(void *arg) {
+    if (off) {
         gpio_set_level(HAP_SOFF, 0);
-    } else if (full1) {
+    } else if (full) {
         gpio_set_level(HAP_SOFF, 1);
     }
 
-    if (off2) {
-        gpio_set_level(HAP_ASP, 0);
-    } else if (full2) {
-        gpio_set_level(HAP_ASP, 1);
-    }
-
-    counter1 = period1;
-    counter2 = period2;
+    counter = period;
 }

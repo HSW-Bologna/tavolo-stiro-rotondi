@@ -27,7 +27,7 @@ void digin_init(void) {
     sem = xSemaphoreCreateMutexStatic(&semaphore_buffer);
 
     static StaticTimer_t timer_buffer;
-    TimerHandle_t        timer = xTimerCreateStatic(TAG, 50, 1, NULL, digin_timer, &timer_buffer);
+    TimerHandle_t        timer = xTimerCreateStatic(TAG, 25, 1, NULL, digin_timer, &timer_buffer);
     xTimerStart(timer, portMAX_DELAY);
 
     ESP_LOGI(TAG, "Digin initialized");
@@ -66,7 +66,7 @@ static void digin_timer(TimerHandle_t timer) {
         ESP_LOGD(TAG, "0x%02X", port);
 
         xSemaphoreTake(sem, portMAX_DELAY);
-        if (debounce_filter(&filter, port, 4)) {
+        if (debounce_filter(&filter, port, 3)) {
             update = 1;
         }
         xSemaphoreGive(sem);

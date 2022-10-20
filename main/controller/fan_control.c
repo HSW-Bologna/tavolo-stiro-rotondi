@@ -1,6 +1,7 @@
 #include "model/model.h"
 #include "peripherals/digin.h"
 #include "peripherals/phase_cut.h"
+#include "peripherals/digout.h"
 #include "esp_log.h"
 #include "gel/timer/timecheck.h"
 #include "utils/utils.h"
@@ -42,7 +43,7 @@ void fan_control(model_t *pmodel) {
 
         case STATE_WAITING_FOR_FOTOCELLULA:
             if (fotocellula && !pedale) {
-                if (is_expired(timestamp, get_millis(), 300UL)) {
+                if (is_expired(timestamp, get_millis(), 100UL)) {
                     state     = STATE_ASPIRAZIONE;
                     timestamp = get_millis();
                 }
@@ -93,7 +94,7 @@ void fan_control(model_t *pmodel) {
 
 
     if (!model_get_test(pmodel)) {
-        phase_cut_set_percentage(PHASE_CUT_ASPIRAZIONE, model_get_percentuale_aspirazione(pmodel));
-        phase_cut_set_percentage(PHASE_CUT_SOFFIO, model_get_percentuale_soffio(pmodel));
+        phase_cut_set_percentage(model_get_percentuale_soffio(pmodel));
+        digout_update(DIGOUT_ASPIRAZIONE, model_get_aspirazione_on(pmodel));
     }
 }

@@ -9,7 +9,7 @@
 #include "freertos/semphr.h"
 
 
-#define NUM_SAMPLES 10
+#define NUM_SAMPLES 20
 
 
 static void level_timer(TimerHandle_t timer);
@@ -37,7 +37,7 @@ void liquid_level_init(void) {
     sem = xSemaphoreCreateMutexStatic(&semaphore_buffer);
 
     static StaticTimer_t timer_buffer;
-    TimerHandle_t        timer = xTimerCreateStatic(TAG, pdMS_TO_TICKS(100), 1, NULL, level_timer, &timer_buffer);
+    TimerHandle_t        timer = xTimerCreateStatic(TAG, pdMS_TO_TICKS(50), 1, NULL, level_timer, &timer_buffer);
     xTimerStart(timer, portMAX_DELAY);
 }
 

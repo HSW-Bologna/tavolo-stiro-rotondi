@@ -5,14 +5,8 @@
 #include <stdint.h>
 
 
-typedef enum {
-    PHASE_CUT_FAN_1 = 0,
-    PHASE_CUT_FAN_2,
-} phase_cut_fan_t;
-
-
 void phase_cut_init(void);
 void phase_cut_timer_enable(int enable);
-void phase_cut_set_percentage(phase_cut_fan_t fan, unsigned int perc);
+void phase_cut_set_percentage(unsigned int perc);
 
 #endif

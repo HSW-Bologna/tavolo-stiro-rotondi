@@ -147,6 +147,14 @@ void controller_manage(model_t *pmodel) {
             old_vapore = vapore;
         }
 
+        uint8_t update = 0;
+        update |= model_set_adc_level_1(pmodel, liquid_level_get_adc_value(LIQUID_LEVEL_PROBE_1));
+        update |= model_set_adc_level_2(pmodel, liquid_level_get_adc_value(LIQUID_LEVEL_PROBE_2));
+
+        if (update) {
+            boiler_control_value_changed(pmodel);
+        }
+
         view_event((view_event_t){.code = VIEW_EVENT_CODE_UPDATE});
 
         digin_sync();
@@ -157,15 +165,13 @@ void controller_manage(model_t *pmodel) {
         uint8_t update = 0;
 
         update |= model_set_temperatura_tavolo(pmodel, ptc_get_temperature(PTC_TEMP1));
-        update |= model_set_temperatura_bracciolo(pmodel, ptc_get_temperature(PTC_TEMP2));
+        // update |= model_set_temperatura_bracciolo(pmodel, ptc_get_temperature(PTC_TEMP2));
+        update |= model_set_temperatura_bracciolo(pmodel, 0);
         update |= model_set_adc_ptc_1(pmodel, ptc_get_adc_value(PTC_TEMP1));
         update |= model_set_adc_ptc_2(pmodel, ptc_get_adc_value(PTC_TEMP2));
-        update |= model_set_adc_level_1(pmodel, liquid_level_get_adc_value(LIQUID_LEVEL_PROBE_1));
-        update |= model_set_adc_level_2(pmodel, liquid_level_get_adc_value(LIQUID_LEVEL_PROBE_2));
 
         if (update) {
             view_event((view_event_t){.code = VIEW_EVENT_CODE_UPDATE});
-            boiler_control_value_changed(pmodel);
         }
 
         ts_1s = get_millis();
@@ -178,6 +184,7 @@ void controller_manage(model_t *pmodel) {
         ts_5s = get_millis();
     }
 
+    boiler_control_manage_callbacks(pmodel);
     update_watched_variables(pmodel);
     watcher_process_changes(watched_variables, get_millis());
     configuration_process_parameters();
@@ -238,8 +245,8 @@ static void refresh_test(void *mem, void *arg) {
         DIGOUT_CLEAR(DIGOUT_RISCALDAMENTO_FERRO_2);
         DIGOUT_CLEAR(DIGOUT_RISCALDAMENTO_VAPORE);
         DIGOUT_CLEAR(DIGOUT_RISCALDAMENTO_PIANO);
-        phase_cut_set_percentage(PHASE_CUT_FAN_1, 0);
-        phase_cut_set_percentage(PHASE_CUT_FAN_2, 0);
+        DIGOUT_CLEAR(DIGOUT_ASPIRAZIONE);
+        phase_cut_set_percentage(0);
     } else {
         refresh_light(NULL, pmodel);
         refresh_ferro_1(NULL, pmodel);

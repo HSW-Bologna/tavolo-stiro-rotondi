@@ -21,7 +21,7 @@
 #endif
 
 
-QUEUE_DECLARATION(event_queue, view_event_t, 16);
+QUEUE_DECLARATION(event_queue, view_event_t, 20);
 QUEUE_DEFINITION(event_queue, view_event_t);
 
 

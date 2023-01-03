@@ -10,9 +10,6 @@
 #include "peripherals/digout.h"
 
 
-#define HYSTERESYS_MS 1600
-
-
 typedef enum {
     BOILER_SM_STATE_OFF = 0,
     BOILER_SM_STATE_LEVEL_HYSTERESIS,
@@ -147,7 +144,8 @@ static int heating_event_manager(model_t *pmodel, boiler_control_event_t event) 
             if (!model_boiler_pieno(pmodel)) {
                 ESP_LOGI(TAG, "Liquido finito (%i), aspetto per il tempo di isteresi...",
                          model_get_adc_level_2(pmodel));
-                gel_timer_activate(&hysteresis_timer, HYSTERESYS_MS, get_millis(), gel_timer_callback, NULL);
+                gel_timer_activate(&hysteresis_timer, model_get_isteresi_caldaia(pmodel) * 100, get_millis(),
+                                   gel_timer_callback, NULL);
                 return BOILER_SM_STATE_LEVEL_HYSTERESIS;
             }
             break;

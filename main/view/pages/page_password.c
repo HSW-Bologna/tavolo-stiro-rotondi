@@ -115,15 +115,11 @@ static view_message_t page_event(model_t *pmodel, void *args, view_event_t event
             } else if (event.event == LV_EVENT_READY) {
                 lv_timer_reset(pdata->timer);
 
-                switch (event.data.id) {
-                    case PASSWORD_KB_ID:
-                        if (strcmp(event.string_value, pdata->fence->password) == 0) {
-                            pdata->valid = 1;
-                        } else {
-                            lv_obj_set_style_border_color(pdata->textarea, STYLE_RED, LV_STATE_DEFAULT);
-                            lv_textarea_set_text(pdata->textarea, "");
-                        }
-                        break;
+                if (strcmp(event.string_value, pdata->fence->password) == 0) {
+                    pdata->valid = 1;
+                } else {
+                    lv_obj_set_style_border_color(pdata->textarea, STYLE_RED, LV_STATE_DEFAULT);
+                    lv_textarea_set_text(pdata->textarea, "");
                 }
             } else if (event.event == LV_EVENT_RELEASED) {
                 lv_timer_reset(pdata->timer);

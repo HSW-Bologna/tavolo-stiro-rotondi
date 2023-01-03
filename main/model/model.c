@@ -7,7 +7,6 @@
 
 
 #define ADC_PROBE_1_THRESHOLD 2048
-#define ADC_PROBE_2_THRESHOLD 1000
 
 
 static const char *TAG = "Model";
@@ -43,6 +42,8 @@ void model_init(model_t *pmodel) {
     pmodel->configuration.isteresi_tavolo                = 2;
     pmodel->configuration.isteresi_bracciolo             = 2;
     pmodel->configuration.numero_sonde                   = 1;
+    pmodel->configuration.boiler_adc_threshold           = 2000;
+    pmodel->configuration.isteresi_caldaia               = 15;
 
     pmodel->configuration.fotocellula = FOTOCELLULA_SX;
 
@@ -151,5 +152,5 @@ uint8_t model_liquid_threshold_1_reached(model_t *pmodel) {
 
 uint8_t model_boiler_pieno(model_t *pmodel) {
     assert(pmodel != NULL);
-    return model_get_adc_level_2(pmodel) < ADC_PROBE_2_THRESHOLD;
+    return model_get_adc_level_2(pmodel) < model_get_boiler_adc_threshold(pmodel);
 }

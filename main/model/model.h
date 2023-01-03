@@ -65,7 +65,9 @@ typedef struct {
         uint8_t  percentuali_soffio[NUM_SPEED_STEPS];
         uint16_t isteresi_tavolo;
         uint16_t isteresi_bracciolo;
+        uint16_t isteresi_caldaia;
         uint8_t  numero_sonde;
+        uint16_t boiler_adc_threshold;
     } configuration;
 
     struct {
@@ -121,6 +123,7 @@ GETTER(max_temperatura_tavolo, configuration.max_temperatura_tavolo);
 GETTER(max_temperatura_bracciolo, configuration.max_temperatura_bracciolo);
 GETTER(isteresi_tavolo, configuration.isteresi_tavolo);
 GETTER(isteresi_bracciolo, configuration.isteresi_bracciolo);
+GETTER(isteresi_caldaia, configuration.isteresi_caldaia);
 GETTER(richiesta_boiler, run.richiesta_boiler);
 
 GETTERNSETTER(soffio_on, run.soffio_on);
@@ -129,6 +132,7 @@ GETTERNSETTER(setpoint_temperatura_tavolo, configuration.setpoint_temperatura_ta
 GETTERNSETTER(setpoint_temperatura_bracciolo, configuration.setpoint_temperatura_bracciolo);
 GETTERNSETTER(velocita_soffio, configuration.velocita_soffio);
 GETTERNSETTER(numero_sonde, configuration.numero_sonde);
+GETTERNSETTER(boiler_adc_threshold, configuration.boiler_adc_threshold);
 GETTERNSETTER(temperatura_tavolo, run.temperatura_tavolo);
 GETTERNSETTER(temperatura_bracciolo, run.temperatura_bracciolo);
 GETTERNSETTER(tavolo_on, run.tavolo_on);

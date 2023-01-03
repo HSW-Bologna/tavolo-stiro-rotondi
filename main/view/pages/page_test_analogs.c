@@ -77,7 +77,7 @@ static view_message_t page_event(model_t *pmodel, void *args, view_event_t event
 
                         case NEXT_BTN_ID:
                             msg.vmsg.code = VIEW_PAGE_MESSAGE_CODE_SWAP;
-                            msg.vmsg.page = &page_test_output;
+                            msg.vmsg.page = &page_temp_parameter;
                             break;
                     }
                     break;

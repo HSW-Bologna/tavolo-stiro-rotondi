@@ -67,7 +67,7 @@ void view_init(model_t *pmodel,
     indev_drv.type                   = LV_INDEV_TYPE_POINTER;
     indev_drv.read_cb                = read_cb;
     indev_drv.long_press_time        = 1200UL;
-    indev_drv.long_press_repeat_time = 100UL;
+    indev_drv.long_press_repeat_time = 50UL;
     /*Register the driver in LVGL and save the created input device object*/
     touch_indev = lv_indev_drv_register(&indev_drv);
 

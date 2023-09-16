@@ -8,9 +8,6 @@
 LV_IMG_DECLARE(img_door);
 
 
-static lv_obj_t *create_title(lv_obj_t *root, const char *text, int code, const lv_font_t *font, uint16_t right_gap);
-
-
 view_common_led_button_t view_common_create_led_button(lv_obj_t *root, const char *text, int id, int number) {
     lv_obj_t                *btn, *lbl, *led;
     view_common_led_button_t led_button = {0};
@@ -90,10 +87,6 @@ lv_obj_t *view_common_create_title(lv_obj_t *root, const char *text, int back_id
 }
 
 
-// lv_obj_t *view_common_create_simple_title(lv_obj_t *root, const char *text, int code) {
-// return create_title(root, text, code, strlen(text) > 22 ? STYLE_FONT_SMALL : STYLE_FONT_MEDIUM, 0);
-//}
-
 
 void view_common_set_hidden(lv_obj_t *obj, int hidden) {
     if (((obj->flags & LV_OBJ_FLAG_HIDDEN) == 0) && hidden) {
@@ -117,31 +110,4 @@ void view_common_img_set_src(lv_obj_t *img, const lv_img_dsc_t *dsc) {
     if (lv_img_get_src(img) != dsc) {
         lv_img_set_src(img, dsc);
     }
-}
-
-
-static lv_obj_t *create_title(lv_obj_t *root, const char *text, int code, const lv_font_t *font, uint16_t right_gap) {
-    lv_obj_t *cont = lv_obj_create(root);
-    lv_obj_set_size(cont, LV_HOR_RES - 8 - right_gap, 80);
-    lv_obj_add_style(cont, (lv_style_t *)&style_transparent_cont, LV_STATE_DEFAULT);
-
-    lv_obj_t *btn = lv_btn_create(cont);
-    lv_obj_set_size(btn, 56, 56);
-    lv_obj_t *symbol = lv_label_create(btn);
-    lv_obj_set_style_text_font(symbol, STYLE_FONT_BIG, LV_STATE_DEFAULT);
-    lv_label_set_text(symbol, LV_SYMBOL_LEFT);
-    lv_obj_center(symbol);
-    lv_obj_align(btn, LV_ALIGN_LEFT_MID, 0, 0);
-
-    view_register_object_default_callback(btn, code);
-
-    lv_obj_t *lbl = lv_label_create(cont);
-    lv_obj_set_style_text_font(lbl, font, LV_STATE_DEFAULT);
-    lv_label_set_long_mode(lbl, LV_LABEL_LONG_WRAP);
-    lv_obj_set_width(lbl, LV_HOR_RES - 16 - 56 - right_gap);
-    lv_label_set_text(lbl, text);
-    lv_obj_align_to(lbl, btn, LV_ALIGN_OUT_RIGHT_TOP, 8, 0);
-
-    lv_obj_align(cont, LV_ALIGN_TOP_LEFT, 8, 4);
-    return cont;
 }

@@ -1,7 +1,4 @@
 #include "model/model.h"
-#include "peripherals/digin.h"
-#include "peripherals/phase_cut.h"
-#include "peripherals/digout.h"
 #include "esp_log.h"
 #include "gel/timer/timecheck.h"
 #include "utils/utils.h"
@@ -26,9 +23,10 @@ static state_t       state     = STATE_NO_FOTOCELLULA;
 
 
 void fan_control(model_t *pmodel) {
+    (void)TAG;
 
-    uint8_t fotocellula = digin_read(DIGIN_FOTOCELLULA_DX);
-    uint8_t pedale      = digin_read(DIGIN_PEDALE);
+    uint8_t fotocellula = model_digin_read(pmodel, DIGIN_FOTOCELLULA_DX);
+    uint8_t pedale      = model_digin_read(pmodel, DIGIN_PEDALE);
 
     switch (state) {
         case STATE_NO_FOTOCELLULA:
@@ -94,7 +92,6 @@ void fan_control(model_t *pmodel) {
 
 
     if (!model_get_test(pmodel)) {
-        phase_cut_set_percentage(model_get_percentuale_soffio(pmodel));
-        digout_update(DIGOUT_ASPIRAZIONE, model_get_aspirazione_on(pmodel));
+        model_set_relay(pmodel, DIGOUT_ASPIRAZIONE, model_get_aspirazione_on(pmodel));
     }
 }

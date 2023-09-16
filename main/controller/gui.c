@@ -5,8 +5,7 @@
 #include "gel/timer/timecheck.h"
 #include "utils/utils.h"
 #include "lvgl.h"
-#include "buzzer.h"
-//#include "standby.h"
+#include "peripherals/buzzer.h"
 
 
 static const char *TAG = "Gui";
@@ -29,8 +28,7 @@ void controller_gui_manage(model_t *pmodel) {
 
     while (view_get_next_msg(pmodel, &umsg, &event)) {
         if ((event.code == VIEW_EVENT_CODE_LVGL && (event.event == LV_EVENT_CLICKED)) || umsg.beep) {
-            buzzer_beep(1, 50, 0);
-            // standby_poke(pmodel);
+            buzzer_beep(1, 20, 20);
         }
 
         controller_process_message(pmodel, &umsg.cmsg);

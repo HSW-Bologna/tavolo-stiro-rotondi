@@ -7,10 +7,7 @@
 #include "view/intl/intl.h"
 #include "view/common.h"
 #include "gel/pagemanager/page_manager.h"
-#include "peripherals/digout.h"
 
-
-#define NUM_OUTPUTS 7
 
 
 enum {
@@ -29,9 +26,9 @@ struct page_data {
 static void page_update(model_t *pmodel, struct page_data *pdata);
 
 
-static const char *descriptions[NUM_OUTPUTS] = {
+/*static const char *descriptions[NUM_OUTPUTS] = {
     "Pompa vapore", "Risc. vapore", "Piano", "Bracc.", "Ferro 1", "Ferro 2", "Luce",
-};
+};*/
 
 
 static const digout_t digout_codes[NUM_OUTPUTS] = {

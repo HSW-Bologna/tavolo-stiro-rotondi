@@ -7,7 +7,6 @@
 #include "esp_log.h"
 #include "view/view.h"
 #include "boiler_control.h"
-#include "peripherals/digout.h"
 
 
 typedef enum {
@@ -112,7 +111,7 @@ static int filling_event_manager(model_t *pmodel, boiler_control_event_t event) 
     switch (event) {
         case BOILER_CONTROL_EVENT_LEVEL_CHANGE:
             if (model_boiler_pieno(pmodel)) {
-                ESP_LOGI(TAG, "Livello raggiunto (%i), riscaldo", model_get_adc_level_2(pmodel));
+                ESP_LOGI(TAG, "Livello raggiunto (%i), riscaldo", model_get_probe_level(pmodel, LIQUID_LEVEL_PROBE_2));
                 boiler_update(pmodel, 1);
                 pump_update(pmodel, 0);
                 return BOILER_SM_STATE_HEATING;
@@ -143,7 +142,7 @@ static int heating_event_manager(model_t *pmodel, boiler_control_event_t event) 
         case BOILER_CONTROL_EVENT_LEVEL_CHANGE:
             if (!model_boiler_pieno(pmodel)) {
                 ESP_LOGI(TAG, "Liquido finito (%i), aspetto per il tempo di isteresi...",
-                         model_get_adc_level_2(pmodel));
+                         model_get_probe_level(pmodel, LIQUID_LEVEL_PROBE_2));
                 gel_timer_activate(&hysteresis_timer, model_get_isteresi_caldaia(pmodel) * 100, get_millis(),
                                    gel_timer_callback, NULL);
                 return BOILER_SM_STATE_LEVEL_HYSTERESIS;
@@ -173,7 +172,7 @@ static int hysteresis_event_manager(model_t *pmodel, boiler_control_event_t even
     switch (event) {
         case BOILER_CONTROL_EVENT_LEVEL_CHANGE:
             if (model_boiler_pieno(pmodel)) {
-                ESP_LOGI(TAG, "Di nuovo in livello (%i)", model_get_adc_level_2(pmodel));
+                ESP_LOGI(TAG, "Di nuovo in livello (%i)", model_get_probe_level(pmodel, LIQUID_LEVEL_PROBE_2));
                 gel_timer_deactivate(&hysteresis_timer);
                 pump_update(pmodel, 0);
                 boiler_update(pmodel, 1);
@@ -208,7 +207,7 @@ static void boiler_update(model_t *pmodel, uint8_t on) {
         view_event((view_event_t){.code = VIEW_EVENT_CODE_UPDATE});
     }
     if (!model_get_test(pmodel)) {
-        digout_update(DIGOUT_RISCALDAMENTO_VAPORE, on);
+        model_set_relay(pmodel, DIGOUT_RISCALDAMENTO_VAPORE, on);
     }
 }
 
@@ -218,7 +217,7 @@ static void pump_update(model_t *pmodel, uint8_t on) {
         view_event((view_event_t){.code = VIEW_EVENT_CODE_UPDATE});
     }
     if (!model_get_test(pmodel)) {
-        digout_update(DIGOUT_POMPA, on);
+        model_set_relay(pmodel, DIGOUT_POMPA, on);
     }
 }
 

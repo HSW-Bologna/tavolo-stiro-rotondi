@@ -22,5 +22,5 @@ i2c_driver_t io_expander_2 = {
 i2c_driver_t rx8010_driver = {
     .device_address = RX8010_DEFAULT_ADDRESS,
     .i2c_transfer   = esp_idf_i2c_port_transfer,
-    .arg            = (void *)(uintptr_t)I2C_NUM_0,
+    .arg            = (void *)(uintptr_t)I2C_NUM_1,
 };

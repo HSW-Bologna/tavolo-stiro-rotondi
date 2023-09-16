@@ -5,9 +5,12 @@
  * Definizioni dei pin da utilizzare
  */
 
-#define HAP_ASP GPIO_NUM_25
-#define HAP_SOFF GPIO_NUM_26
-#define HAP_INT0 GPIO_NUM_35
+#define HAP_RETRO GPIO_NUM_10
+#define HAP_IRQ   GPIO_NUM_3
+
+#define HAP_ASP  GPIO_NUM_13
+#define HAP_SOFF GPIO_NUM_14
+#define HAP_INT0 GPIO_NUM_15
 
 #define HAP_TEMP1 ADC2_CHANNEL_0
 #define HAP_TEMP2 ADC1_CHANNEL_6
@@ -15,8 +18,16 @@
 #define HAP_LIVELLO1_H20 ADC1_CHANNEL_4
 #define HAP_LIVELLO2_H20 ADC1_CHANNEL_5
 
-#define HAP_PWM_LIVELLI GPIO_NUM_2
+#define HAP_PWM_LIVELLI GPIO_NUM_16
 
-#define HAP_RS485_DIR GPIO_NUM_5
+#define HAP_BUZ GPIO_NUM_11
+
+#define HAP_DIR    GPIO_NUM_33
+#define HAP_TX_485 GPIO_NUM_34
+#define HAP_RX_485 GPIO_NUM_35
+
+#define HAP_SDA_CLK  GPIO_NUM_40
+#define HAP_SCL_CLK  GPIO_NUM_41
+#define HAP_HEARTBIT GPIO_NUM_42
 
 #endif

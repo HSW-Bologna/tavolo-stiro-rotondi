@@ -1,11 +1,6 @@
-#include "peripherals/ptc.h"
+#include "peripherals/buzzer.h"
 
 
-int ptc_get_temperature(ptc_t ptc) {
-    return 30;
-}
+void buzzer_beep(uint16_t r, unsigned long t_on, unsigned long t_off) {
 
-
-uint16_t ptc_get_adc_value(ptc_t ptc) {
-    return 0;
 }

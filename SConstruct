@@ -47,6 +47,8 @@ CFLAGS = [
     '-DGEL_PARAMETER_CONFIGURATION_HEADER="\\"gel_parameter_conf.h\\""',
     '-DGEL_PAGEMANAGER_CONFIGURATION_HEADER="\\"gel_pman_conf.h\\""',
     "-DI2C_DEVICES_STRUCT_TM_CONVERSION",
+    '-DLIGHTMODBUS_CONFIG_FILE="\\"esp.config.h\\""',
+    '-DLIGHTMODBUS_USE_CONFIG_FILE',
     "-Wno-unused-parameter",
     "-static-libgcc",
     "-static-libstdc++",
@@ -55,7 +57,7 @@ LDLIBS = ["-lSDL2", "-lpthread", "-lm"]
 
 CPPPATH = [
     COMPONENTS, f'#{SIMULATOR}/port', f'#{MAIN}',
-    f"#{MAIN}/config", f"#{SIMULATOR}", B64, CJSON, f"#{LVGL}", f"#{DRIVERS}",
+    f"#{MAIN}/config", f"#{SIMULATOR}", B64, CJSON, f"#{LVGL}", f"#{DRIVERS}", f"{COMPONENTS}/liblightmodbus-esp/repo/include",
 ]
 
 TRANSLATIONS = [
@@ -130,6 +132,7 @@ def main():
     sources += [File(f'{CJSON}/cJSON.c')]
     sources += [File(f'{B64}/encode.c'),
                 File(f'{B64}/decode.c'), File(f'{B64}/buffer.c')]
+    sources += [File(f'{COMPONENTS}/liblightmodbus-esp/src/impl.c')]
 
     prog = env.Program(PROGRAM, sdkconfig + sources +
                        freertos + gel + i2c)

@@ -48,7 +48,7 @@ static void open_page(model_t *pmodel, void *args) {
     pdata->valid  = 0;
     pdata->lockts = 0;
 
-    view_common_create_title(lv_scr_act(), "Password", BACK_BTN_ID, -1);
+    view_common_create_title(lv_scr_act(), "Password", BACK_BTN_ID, -1, -1);
 
     static const char *kbmap[] = {
         "1", "2", "3", "4", "5", "\n", "6", "7", "8", "9", "0", "\n", LV_SYMBOL_BACKSPACE, LV_SYMBOL_OK, "",

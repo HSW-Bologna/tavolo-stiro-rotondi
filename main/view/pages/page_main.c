@@ -354,9 +354,9 @@ static view_message_t page_event(model_t *pmodel, void *args, view_event_t event
             lv_obj_set_style_opa(pdata->img_vapore_ferro_1, LV_OPA_COVER, LV_STATE_DEFAULT);
             lv_obj_fade_out(pdata->img_vapore_ferro_1, ANIM_VAPORE_PERIOD, 0);
             lv_animimg_start(pdata->img_vapore_ferro_1);
-            lv_obj_set_style_opa(pdata->img_vapore_ferro_2, LV_OPA_COVER, LV_STATE_DEFAULT);
-            lv_obj_fade_out(pdata->img_vapore_ferro_2, ANIM_VAPORE_PERIOD, 0);
-            lv_animimg_start(pdata->img_vapore_ferro_2);
+            // lv_obj_set_style_opa(pdata->img_vapore_ferro_2, LV_OPA_COVER, LV_STATE_DEFAULT);
+            // lv_obj_fade_out(pdata->img_vapore_ferro_2, ANIM_VAPORE_PERIOD, 0);
+            // lv_animimg_start(pdata->img_vapore_ferro_2);
             break;
 
         case VIEW_EVENT_CODE_LVGL: {
@@ -574,6 +574,11 @@ static view_message_t page_event(model_t *pmodel, void *args, view_event_t event
                             model_set_velocita_soffio(pmodel, event.value);
                             update_page(pmodel, pdata, 1);
                             break;
+
+                        case FAN_SUCTION_SLIDER_ID:
+                            model_set_velocita_aspirazione(pmodel, event.value);
+                            update_page(pmodel, pdata, 1);
+                            break;
                     }
                     break;
                 }
@@ -655,15 +660,17 @@ static void update_page(model_t *pmodel, struct page_data *pdata, uint8_t restar
 
     view_common_set_checked(pdata->btn_tavolo, model_get_richiesta_temperatura_tavolo(pmodel));
     view_common_set_hidden(pdata->img_calore_tavolo, !model_get_tavolo_on(pmodel));
-    view_common_img_set_src(pdata->img_tavolo, model_get_tavolo_on(pmodel) ? &img_tavolo_on : &img_tavolo_off);
-    view_common_img_set_src(pdata->img_tavolo_popup, model_get_tavolo_on(pmodel) ? &img_tavolo_on : &img_tavolo_off);
+    view_common_img_set_src(pdata->img_tavolo,
+                            model_get_richiesta_temperatura_tavolo(pmodel) ? &img_tavolo_on : &img_tavolo_off);
+    view_common_img_set_src(pdata->img_tavolo_popup,
+                            model_get_richiesta_temperatura_tavolo(pmodel) ? &img_tavolo_on : &img_tavolo_off);
 
     view_common_set_checked(pdata->btn_bracciolo, model_get_richiesta_temperatura_bracciolo(pmodel));
     view_common_set_hidden(pdata->img_calore_bracciolo, !model_get_bracciolo_on(pmodel));
     view_common_img_set_src(pdata->img_bracciolo,
-                            model_get_bracciolo_on(pmodel) ? &img_bracciolo_on : &img_bracciolo_off);
+                            model_get_richiesta_temperatura_bracciolo(pmodel) ? &img_bracciolo_on : &img_bracciolo_off);
     view_common_img_set_src(pdata->img_bracciolo_popup,
-                            model_get_bracciolo_on(pmodel) ? &img_bracciolo_on : &img_bracciolo_off);
+                            model_get_richiesta_temperatura_bracciolo(pmodel) ? &img_bracciolo_on : &img_bracciolo_off);
 
     view_common_img_set_src(pdata->img_ferro_1, model_get_ferro_1(pmodel) ? &img_ferro_1_on : &img_ferro_1_off);
     view_common_img_set_src(pdata->img_ferro_2, model_get_ferro_2(pmodel) ? &img_ferro_2_on : &img_ferro_2_off);

@@ -11,6 +11,7 @@
 
 enum {
     BACK_BTN_ID,
+    PREV_BTN_ID,
     NEXT_BTN_ID,
 };
 
@@ -34,7 +35,7 @@ static void open_page(model_t *pmodel, void *args) {
     struct page_data *pdata = args;
     lv_obj_t         *cont, *lbl;
 
-    cont = view_common_create_title(lv_scr_act(), "Collaudo ADC", BACK_BTN_ID, NEXT_BTN_ID);
+    cont = view_common_create_title(lv_scr_act(), "Collaudo ADC", BACK_BTN_ID, PREV_BTN_ID, NEXT_BTN_ID);
 
     cont = lv_obj_create(lv_scr_act());
     lv_obj_set_size(cont, LV_HOR_RES, LV_VER_RES - 64);
@@ -72,6 +73,11 @@ static view_message_t page_event(model_t *pmodel, void *args, view_event_t event
                         case BACK_BTN_ID:
                             msg.vmsg.code = VIEW_PAGE_MESSAGE_CODE_BACK;
                             model_set_test(pmodel, 0);
+                            break;
+
+                        case PREV_BTN_ID:
+                            msg.vmsg.code = VIEW_PAGE_MESSAGE_CODE_SWAP;
+                            msg.vmsg.page = &page_test_input;
                             break;
 
                         case NEXT_BTN_ID:

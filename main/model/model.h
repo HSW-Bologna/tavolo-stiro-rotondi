@@ -55,6 +55,7 @@ typedef enum {
 
 
 #define DIGIN_FOTOCELLULA_DX DIGIN_IN1
+#define DIGIN_FOTOCELLULA_SX DIGIN_IN2
 #define DIGIN_PEDALE         DIGIN_IN3
 
 
@@ -74,8 +75,8 @@ typedef enum {
 
 
 typedef enum {
-    LIQUID_LEVEL_PROBE_1 = 0,
-    LIQUID_LEVEL_PROBE_2,
+    LIQUID_LEVEL_PROBE_2 = 0,
+    LIQUID_LEVEL_PROBE_1,
 #define LIQUID_LEVEL_PROBE_NUM 2
 } liquid_level_probe_t;
 

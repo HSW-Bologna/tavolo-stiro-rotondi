@@ -48,7 +48,7 @@ password_page_options_t *view_common_default_password_page_options(view_page_mes
 }
 
 
-lv_obj_t *view_common_create_title(lv_obj_t *root, const char *text, int back_id, int next_id) {
+lv_obj_t *view_common_create_title(lv_obj_t *root, const char *text, int back_id, int prev_id, int next_id) {
     lv_obj_t *btn, *lbl, *cont, *img;
 
     cont = lv_obj_create(root);
@@ -63,6 +63,18 @@ lv_obj_t *view_common_create_title(lv_obj_t *root, const char *text, int back_id
     lv_obj_center(img);
     lv_obj_align(btn, LV_ALIGN_LEFT_MID, 4, 0);
     view_register_object_default_callback(btn, back_id);
+
+    if (prev_id >= 0) {
+        btn = lv_btn_create(cont);
+        lv_obj_add_style(btn, (lv_style_t *)&style_config_btn, LV_STATE_DEFAULT);
+        lv_obj_set_size(btn, 52, 52);
+        lbl = lv_label_create(btn);
+        lv_obj_set_style_text_font(lbl, STYLE_FONT_BIG, LV_STATE_DEFAULT);
+        lv_label_set_text(lbl, LV_SYMBOL_LEFT);
+        lv_obj_center(lbl);
+        lv_obj_align(btn, LV_ALIGN_RIGHT_MID, -64, 0);
+        view_register_object_default_callback(btn, prev_id);
+    }
 
     if (next_id >= 0) {
         btn = lv_btn_create(cont);

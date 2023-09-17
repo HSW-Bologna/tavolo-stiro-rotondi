@@ -25,8 +25,16 @@ static state_t       state     = STATE_NO_FOTOCELLULA;
 void fan_control(model_t *pmodel) {
     (void)TAG;
 
-    uint8_t fotocellula = model_digin_read(pmodel, DIGIN_FOTOCELLULA_DX);
-    uint8_t pedale      = model_digin_read(pmodel, DIGIN_PEDALE);
+    uint8_t fotocellula = 0;
+    switch (model_get_fotocellula(pmodel)) {
+        case FOTOCELLULA_SX:
+            fotocellula = model_digin_read(pmodel, DIGIN_FOTOCELLULA_SX);
+            break;
+        case FOTOCELLULA_DX:
+            fotocellula = model_digin_read(pmodel, DIGIN_FOTOCELLULA_DX);
+            break;
+    };
+    uint8_t pedale = model_digin_read(pmodel, DIGIN_PEDALE);
 
     switch (state) {
         case STATE_NO_FOTOCELLULA:

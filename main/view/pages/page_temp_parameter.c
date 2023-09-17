@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <stdlib.h>
 #include "lvgl.h"
 #include "model/model.h"
@@ -11,6 +12,7 @@
 
 enum {
     BACK_BTN_ID,
+    PREV_BTN_ID,
     NEXT_BTN_ID,
     ADC_PLUS_BTN_ID,
     ADC_MINUS_BTN_ID,
@@ -39,7 +41,7 @@ static void open_page(model_t *pmodel, void *args) {
     struct page_data *pdata = args;
     lv_obj_t         *cont, *lbl, *btn;
 
-    cont = view_common_create_title(lv_scr_act(), "Calibrazione caldaia", BACK_BTN_ID, NEXT_BTN_ID);
+    cont = view_common_create_title(lv_scr_act(), "Calibrazione caldaia", BACK_BTN_ID, PREV_BTN_ID, NEXT_BTN_ID);
 
     cont = lv_obj_create(lv_scr_act());
     lv_obj_set_size(cont, LV_HOR_RES, LV_VER_RES - 64);
@@ -119,6 +121,11 @@ static view_message_t page_event(model_t *pmodel, void *args, view_event_t event
                             model_set_test(pmodel, 0);
                             break;
 
+                        case PREV_BTN_ID:
+                            msg.vmsg.code = VIEW_PAGE_MESSAGE_CODE_SWAP;
+                            msg.vmsg.page = &page_test_analogs;
+                            break;
+
                         case NEXT_BTN_ID:
                             msg.vmsg.code = VIEW_PAGE_MESSAGE_CODE_SWAP;
                             msg.vmsg.page = &page_test_fans;
@@ -183,7 +190,10 @@ static view_message_t page_event(model_t *pmodel, void *args, view_event_t event
 
 static void page_update(model_t *pmodel, struct page_data *pdata) {
     lv_label_set_text_fmt(pdata->lbl_livello, "%4i", model_get_boiler_adc_threshold(pmodel));
-    lv_label_set_text_fmt(pdata->lbl_isteresi, "%.1f s", ((float)model_get_isteresi_caldaia(pmodel)) / 10.);
+
+    char string[32] = {0};
+    snprintf(string, sizeof(string), "%.1f s", ((float)model_get_isteresi_caldaia(pmodel)) / 10.);
+    lv_label_set_text(pdata->lbl_isteresi, string);
 }
 
 

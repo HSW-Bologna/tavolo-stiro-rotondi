@@ -13,6 +13,7 @@
 enum {
     OUTPUT_BTN_ID,
     BACK_BTN_ID,
+    PREV_BTN_ID,
     NEXT_BTN_ID,
 };
 
@@ -55,7 +56,7 @@ static void open_page(model_t *pmodel, void *args) {
 
     pdata->output_map = 0;
 
-    cont = view_common_create_title(lv_scr_act(), "Collaudo uscite", BACK_BTN_ID, NEXT_BTN_ID);
+    cont = view_common_create_title(lv_scr_act(), "Collaudo uscite", BACK_BTN_ID, PREV_BTN_ID, NEXT_BTN_ID);
 
     static lv_coord_t col_dsc[] = {150, 150, 150, LV_GRID_TEMPLATE_LAST};
     static lv_coord_t row_dsc[] = {60, 60, 60, LV_GRID_TEMPLATE_LAST};
@@ -124,6 +125,11 @@ static view_message_t page_event(model_t *pmodel, void *args, view_event_t event
                             }
 
                             page_update(pmodel, pdata);
+                            break;
+
+                        case PREV_BTN_ID:
+                            msg.vmsg.code = VIEW_PAGE_MESSAGE_CODE_SWAP;
+                            msg.vmsg.page = &page_test_fans;
                             break;
 
                         case NEXT_BTN_ID:

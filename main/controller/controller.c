@@ -91,12 +91,12 @@ void controller_init(model_t *pmodel) {
     watched_variables[i++] = WATCHER(&pmodel->run.luce, refresh_light, pmodel);
     watched_variables[i++] = WATCHER(&pmodel->run.ferro_1, refresh_ferro_1, pmodel);
     watched_variables[i++] = WATCHER(&pmodel->run.ferro_2, refresh_ferro_2, pmodel);
-    watched_variables[i++] = WATCHER(&pmodel->configuration.velocita_soffio, refresh_ventole, pmodel);
+    watched_variables[i++] = WATCHER(&pmodel->minion.inputs, refresh_ventole, pmodel);
     watched_variables[i++] = WATCHER_ARRAY(variables_temperature, 6, refresh_temperature, pmodel);
     assert(i == NUM_WATCHED_VARIABLES);
     watched_variables[i] = WATCHER_NULL;
     watcher_list_init(watched_variables);
-    watcher_trigger_all_cb(watched_variables);
+    watcher_trigger_all(watched_variables);
 
     view_change_page(pmodel, &page_main);
 }
@@ -164,7 +164,7 @@ void controller_manage(model_t *pmodel) {
         ts_1s = get_millis();
     }
 
-    if (is_expired(ts_5s, get_millis(), 5000UL)) {
+    if (is_expired(ts_5s, get_millis(), 10000UL)) {
         ESP_LOGI(TAG, "State dump:\n\tFotocellula dx: %i\n\tPedale: %i\n\tADC1: %i\n\tADC2: %i\n",
                  pmodel->minion.inputs[0], pmodel->minion.inputs[3],
                  model_get_probe_level(pmodel, LIQUID_LEVEL_PROBE_1),
@@ -176,6 +176,7 @@ void controller_manage(model_t *pmodel) {
     update_watched_variables(pmodel);
     watcher_process_changes(watched_variables, get_millis());
     configuration_process_parameters();
+    fan_control(pmodel);
 }
 
 

@@ -127,7 +127,8 @@ pman_view_t view_reset_to_page(model_t *pmodel, int id) {
     event_queue_init(&q);
     view_event((view_event_t){.code = VIEW_EVENT_CODE_OPEN});
     view_wait_release();
-    return pman_reset_to_page(&pman, pmodel, id);
+    int found = 0;
+    return pman_reset_to_page(&pman, pmodel, id, &found);
 }
 
 

@@ -11,6 +11,7 @@
 
 enum {
     BACK_BTN_ID,
+    PREV_BTN_ID,
     NEXT_BTN_ID,
     SLIDER_SUCTION_ID,
     SLIDER_BLOW_ID,
@@ -40,7 +41,7 @@ static void open_page(model_t *pmodel, void *args) {
     struct page_data *pdata = args;
     lv_obj_t         *cont, *slider, *lbl;
 
-    cont = view_common_create_title(lv_scr_act(), "Collaudo ventole", BACK_BTN_ID, NEXT_BTN_ID);
+    cont = view_common_create_title(lv_scr_act(), "Collaudo ventole", BACK_BTN_ID, PREV_BTN_ID, NEXT_BTN_ID);
 
     slider = lv_slider_create(lv_scr_act());
     lv_slider_set_range(slider, 0, 100);
@@ -81,6 +82,13 @@ static view_message_t page_event(model_t *pmodel, void *args, view_event_t event
             switch (event.event) {
                 case LV_EVENT_CLICKED: {
                     switch (event.data.id) {
+                        case PREV_BTN_ID:
+                            model_set_test_percentage_suction(pmodel, 0);
+                            model_set_test_percentage_blow(pmodel, 0);
+                            msg.vmsg.code = VIEW_PAGE_MESSAGE_CODE_SWAP;
+                            msg.vmsg.page = &page_temp_parameter;
+                            break;
+
                         case NEXT_BTN_ID:
                             model_set_test_percentage_suction(pmodel, 0);
                             model_set_test_percentage_blow(pmodel, 0);

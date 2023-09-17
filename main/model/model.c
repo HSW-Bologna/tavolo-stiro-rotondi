@@ -47,22 +47,22 @@ void model_init(model_t *pmodel) {
 
     pmodel->configuration.fotocellula = FOTOCELLULA_SX;
 
-    pmodel->configuration.percentuali_soffio[0] = 20;
-    pmodel->configuration.percentuali_soffio[1] = 30;
-    pmodel->configuration.percentuali_soffio[2] = 35;
-    pmodel->configuration.percentuali_soffio[3] = 40;
-    pmodel->configuration.percentuali_soffio[4] = 45;
-    pmodel->configuration.percentuali_soffio[5] = 50;
-    pmodel->configuration.percentuali_soffio[6] = 60;
+    pmodel->configuration.percentuali_soffio[0] = 40;
+    pmodel->configuration.percentuali_soffio[1] = 45;
+    pmodel->configuration.percentuali_soffio[2] = 50;
+    pmodel->configuration.percentuali_soffio[3] = 55;
+    pmodel->configuration.percentuali_soffio[4] = 60;
+    pmodel->configuration.percentuali_soffio[5] = 65;
+    pmodel->configuration.percentuali_soffio[6] = 70;
     pmodel->configuration.percentuali_soffio[7] = 100;
 
-    pmodel->configuration.percentuali_aspirazione[0] = 20;
-    pmodel->configuration.percentuali_aspirazione[1] = 30;
-    pmodel->configuration.percentuali_aspirazione[2] = 35;
-    pmodel->configuration.percentuali_aspirazione[3] = 40;
-    pmodel->configuration.percentuali_aspirazione[4] = 45;
-    pmodel->configuration.percentuali_aspirazione[5] = 50;
-    pmodel->configuration.percentuali_aspirazione[6] = 60;
+    pmodel->configuration.percentuali_aspirazione[0] = 40;
+    pmodel->configuration.percentuali_aspirazione[1] = 45;
+    pmodel->configuration.percentuali_aspirazione[2] = 50;
+    pmodel->configuration.percentuali_aspirazione[3] = 55;
+    pmodel->configuration.percentuali_aspirazione[4] = 60;
+    pmodel->configuration.percentuali_aspirazione[5] = 65;
+    pmodel->configuration.percentuali_aspirazione[6] = 70;
     pmodel->configuration.percentuali_aspirazione[7] = 100;
 
     memset(pmodel->minion.inputs, 0, sizeof(pmodel->minion.inputs));

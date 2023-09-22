@@ -12,6 +12,7 @@
 #include "esp_log.h"
 
 
+LV_IMG_DECLARE(img_warning_lg);
 LV_IMG_DECLARE(img_calore_1);
 LV_IMG_DECLARE(img_calore_2);
 LV_IMG_DECLARE(img_calore_3);
@@ -75,6 +76,7 @@ enum {
     FAN_SUCTION_MINUS_BTN_ID,
     SOFFIO_POPUP_BTN_ID,
     SUCTION_POPUP_BTN_ID,
+    BTN_DISMISS_ALARM_ID,
     BLANKET_ID,
 };
 
@@ -139,6 +141,9 @@ struct page_data {
 
     lv_obj_t *img_aria_aspirazione;
 
+    lv_obj_t *popup_alarm;
+    lv_obj_t *lbl_alarm;
+
     lv_anim_t anim_ventola_aspirazione;
     lv_anim_t anim_ventola_soffio;
     lv_anim_t anim_ventola_soffio_popup;
@@ -174,6 +179,7 @@ static lv_obj_t *popup_fan_create(lv_obj_t *root, lv_obj_t **slider, lv_obj_t **
                                   int minus_id);
 static void      pause_background_animations(struct page_data *pdata);
 static void      start_background_animations(struct page_data *pdata);
+static lv_obj_t *popup_alarm_create(lv_obj_t *root, lv_obj_t **lbl, int dismiss_id);
 
 
 static const char *TAG = "PageMain";
@@ -336,6 +342,7 @@ static void open_page(model_t *pmodel, void *args) {
     lv_obj_align(popup, LV_ALIGN_CENTER, 0, 0);
     pdata->popup_suction = popup;
 
+    pdata->popup_alarm = popup_alarm_create(lv_scr_act(), &pdata->lbl_alarm, BTN_DISMISS_ALARM_ID);
 
     update_page(pmodel, pdata, 1);
 }
@@ -363,6 +370,11 @@ static view_message_t page_event(model_t *pmodel, void *args, view_event_t event
             switch (event.event) {
                 case LV_EVENT_CLICKED: {
                     switch (event.data.id) {
+                        case BTN_DISMISS_ALARM_ID:
+                            model_set_alarm_communication(pmodel, 0);
+                            update_page(pmodel, pdata, 0);
+                            break;
+
                         case MENU_BTN_ID: {
                             view_page_message_t pw_msg = {
                                 .code = VIEW_PAGE_MESSAGE_CODE_SWAP,
@@ -755,6 +767,10 @@ static void update_page(model_t *pmodel, struct page_data *pdata, uint8_t restar
             lv_slider_set_value(pdata->slider_suction, model_get_velocita_aspirazione(pmodel), LV_ANIM_OFF);
             break;
     }
+
+
+    view_common_set_hidden(pdata->popup_alarm, !model_get_alarm_communication(pmodel));
+    lv_label_set_text(pdata->lbl_alarm, "Allarme comunicazione!");
 }
 
 
@@ -1024,6 +1040,35 @@ static lv_obj_t *popup_fan_create(lv_obj_t *root, lv_obj_t **slider, lv_obj_t **
     return cont;
 }
 
+
+static lv_obj_t *popup_alarm_create(lv_obj_t *root, lv_obj_t **lbl, int dismiss_id) {
+    lv_obj_t *cont = lv_obj_create(root);
+    lv_obj_clear_flag(cont, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_add_style(cont, (lv_style_t *)&style_popup, LV_STATE_DEFAULT);
+    lv_obj_set_size(cont, 240, 240);
+    lv_obj_center(cont);
+
+    *lbl = lv_label_create(cont);
+    lv_obj_align(*lbl, LV_ALIGN_CENTER, 0, -16);
+    lv_label_set_long_mode(*lbl, LV_LABEL_LONG_WRAP);
+    lv_obj_set_width(*lbl, 200);
+
+    lv_obj_t *img = lv_img_create(cont);
+    lv_img_set_src(img, &img_warning_lg);
+    lv_obj_align(img, LV_ALIGN_CENTER, 0, 48);
+
+    lv_obj_t *btn = lv_btn_create(cont);
+    lv_obj_add_style(btn, (lv_style_t *)&style_config_btn, LV_STATE_DEFAULT);
+    lv_obj_set_size(btn, 48, 48);
+    lv_obj_t *btn_lbl = lv_label_create(btn);
+    lv_obj_set_style_text_font(btn_lbl, STYLE_FONT_BIG, LV_STATE_DEFAULT);
+    lv_label_set_text(btn_lbl, LV_SYMBOL_CLOSE);
+    lv_obj_center(btn_lbl);
+    lv_obj_align(btn, LV_ALIGN_TOP_RIGHT, 0, 0);
+    view_register_object_default_callback(btn, dismiss_id);
+
+    return cont;
+}
 
 
 static lv_anim_t slide_in_animation(lv_obj_t *obj, int32_t start, int32_t end) {

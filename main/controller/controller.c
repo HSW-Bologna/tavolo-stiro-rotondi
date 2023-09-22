@@ -127,7 +127,8 @@ void controller_manage(model_t *pmodel) {
     modbus_response_t response;
     if (modbus_get_response(&response)) {
         if (response.error) {
-            // TODO: manage error
+            model_set_alarm_communication(pmodel, 1);
+            view_event((view_event_t){.code = VIEW_EVENT_CODE_UPDATE});
         } else {
             switch (response.tag) {
                 case MODBUS_RESPONSE_TAG_READ_STATE: {

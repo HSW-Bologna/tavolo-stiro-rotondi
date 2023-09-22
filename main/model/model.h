@@ -124,6 +124,7 @@ typedef struct {
         uint8_t bracciolo_on;
         uint8_t test_percentage_suction;
         uint8_t test_percentage_blow;
+        uint8_t alarm_communication;
     } run;
 
     struct {
@@ -177,6 +178,7 @@ GETTER(isteresi_bracciolo, configuration.isteresi_bracciolo);
 GETTER(isteresi_caldaia, configuration.isteresi_caldaia);
 GETTER(richiesta_boiler, run.richiesta_boiler);
 
+GETTERNSETTER(alarm_communication, run.alarm_communication);
 GETTERNSETTER(soffio_on, run.soffio_on);
 GETTERNSETTER(aspirazione_on, run.aspirazione_on);
 GETTERNSETTER(setpoint_temperatura_tavolo, configuration.setpoint_temperatura_tavolo);

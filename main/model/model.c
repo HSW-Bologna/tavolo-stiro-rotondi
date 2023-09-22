@@ -32,6 +32,7 @@ void model_init(model_t *pmodel) {
     pmodel->run.richiesta_boiler                = 0;
     pmodel->run.test_percentage_suction         = 0;
     pmodel->run.test_percentage_blow            = 0;
+    pmodel->run.alarm_communication             = 0;
 
     pmodel->configuration.max_temperatura_tavolo         = APP_CONFIG_DEFAULT_LIMITE_TEMPERATURA;
     pmodel->configuration.max_temperatura_bracciolo      = APP_CONFIG_DEFAULT_LIMITE_TEMPERATURA;

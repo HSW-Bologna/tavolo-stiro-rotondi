@@ -25,7 +25,7 @@ static void page_update(model_t *pmodel, struct page_data *pdata);
 
 
 static const char *descriptions[NUM_INPUTS] = {
-    "Fotocellula Dx asp.", "Fotocellula Sx asp.", "Pedale soffio", "IN4", "Vapore",
+    "Aspirazione", "Soffio", "Scambio tavolo/bracciolo", "IN4", "Vapore",
 };
 
 
@@ -109,7 +109,7 @@ static view_message_t page_event(model_t *pmodel, void *args, view_event_t event
 
 static void page_update(model_t *pmodel, struct page_data *pdata) {
     for (size_t i = 0; i < NUM_INPUTS; i++) {
-        if (model_get_input_num(pmodel, i)) {
+        if (model_digin_read(pmodel, i)) {
             lv_led_on(pdata->led_buttons[i].led);
         } else {
             lv_led_off(pdata->led_buttons[i].led);

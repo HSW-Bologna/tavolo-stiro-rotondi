@@ -72,7 +72,7 @@ static void open_page(model_t *pmodel, void *args) {
     lv_obj_set_style_pad_column(cont, 5, LV_STATE_DEFAULT);
     lv_obj_align(cont, LV_ALIGN_BOTTOM_MID, 0, 0);
 
-    pdata->led_buttons[0] = view_common_create_led_button(cont, "Pompa vapore", OUTPUT_BTN_ID, 0);
+    pdata->led_buttons[0] = view_common_create_led_button(cont, "Spazzola", OUTPUT_BTN_ID, 0);
     lv_obj_set_width(pdata->led_buttons[0].btn, 300);
     lv_obj_set_grid_cell(pdata->led_buttons[0].btn, LV_GRID_ALIGN_CENTER, 0, 2, LV_GRID_ALIGN_CENTER, 0, 1);
 

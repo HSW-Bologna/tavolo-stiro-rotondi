@@ -41,6 +41,7 @@
 
 #define NUM_INPUTS      5
 #define NUM_SPEED_STEPS 8
+#define DIGOUT_GUN      DIGOUT_POMPA
 
 typedef enum {
     DIGOUT_POMPA = 0,
@@ -50,13 +51,13 @@ typedef enum {
     DIGOUT_RISCALDAMENTO_FERRO_1,
     DIGOUT_RISCALDAMENTO_FERRO_2,
     DIGOUT_LUCE,
-    DIGOUT_ASPIRAZIONE,
+    DIGOUT_RECUPERATOR,
 } digout_t;
 
 
-#define DIGIN_FOTOCELLULA_DX DIGIN_IN1
-#define DIGIN_FOTOCELLULA_SX DIGIN_IN2
-#define DIGIN_PEDALE         DIGIN_IN3
+#define DIGIN_SUCTION_PEDAL   DIGIN_IN1
+#define DIGIN_BLOWING_PEDAL   DIGIN_IN2
+#define DIGIN_AIR_FLOW_SWITCH DIGIN_IN3
 
 
 typedef enum {
@@ -125,6 +126,7 @@ typedef struct {
         uint8_t test_percentage_suction;
         uint8_t test_percentage_blow;
         uint8_t alarm_communication;
+        uint8_t gun_state;
     } run;
 
     struct {
@@ -154,7 +156,6 @@ uint8_t  model_liquid_threshold_1_reached(model_t *pmodel);
 uint8_t  model_boiler_pieno(model_t *pmodel);
 uint8_t  model_update_minion_state(model_t *pmodel, uint16_t input_map, uint16_t *liquid_levels, uint16_t *ptc_adcs,
                                    uint16_t *ptc_temperatures);
-uint8_t  model_get_input_num(model_t *pmodel, size_t input);
 void     model_set_relay(model_t *pmodel, size_t relay, uint8_t value);
 uint8_t  model_digin_read(model_t *pmodel, digin_t digin);
 uint16_t model_get_probe_level(model_t *pmodel, liquid_level_probe_t probe);
@@ -179,6 +180,7 @@ GETTER(isteresi_caldaia, configuration.isteresi_caldaia);
 GETTER(richiesta_boiler, run.richiesta_boiler);
 
 GETTERNSETTER(alarm_communication, run.alarm_communication);
+GETTERNSETTER(gun_state, run.gun_state);
 GETTERNSETTER(soffio_on, run.soffio_on);
 GETTERNSETTER(aspirazione_on, run.aspirazione_on);
 GETTERNSETTER(setpoint_temperatura_tavolo, configuration.setpoint_temperatura_tavolo);
@@ -197,6 +199,7 @@ GETTERNSETTER(test_percentage_suction, run.test_percentage_suction);
 GETTERNSETTER(test_percentage_blow, run.test_percentage_blow);
 
 TOGGLER(luce, run.luce);
+TOGGLER(gun, run.gun_state);
 TOGGLER(ferro_1, run.ferro_1);
 TOGGLER(ferro_2, run.ferro_2);
 TOGGLER(fotocellula, configuration.fotocellula);

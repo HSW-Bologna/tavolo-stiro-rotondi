@@ -14,10 +14,11 @@
 #include "boiler_control.h"
 
 
-#define NUM_WATCHED_VARIABLES 7
+#define NUM_WATCHED_VARIABLES 8
 
 
 static void    refresh_light(void *mem, void *arg);
+static void    refresh_gun(void *mem, void *arg);
 static void    refresh_test(void *mem, void *arg);
 static void    refresh_ferro_1(void *mem, void *arg);
 static void    refresh_ferro_2(void *mem, void *arg);
@@ -89,6 +90,7 @@ void controller_init(model_t *pmodel) {
     watched_variables[i++] = WATCHER(&variables_output, update_outputs, pmodel);
     watched_variables[i++] = WATCHER(&pmodel->run.test, refresh_test, pmodel);
     watched_variables[i++] = WATCHER(&pmodel->run.luce, refresh_light, pmodel);
+    watched_variables[i++] = WATCHER(&pmodel->run.gun_state, refresh_gun, pmodel);
     watched_variables[i++] = WATCHER(&pmodel->run.ferro_1, refresh_ferro_1, pmodel);
     watched_variables[i++] = WATCHER(&pmodel->run.ferro_2, refresh_ferro_2, pmodel);
     watched_variables[i++] = WATCHER(&pmodel->minion.inputs, refresh_ventole, pmodel);
@@ -134,12 +136,17 @@ void controller_manage(model_t *pmodel) {
                 case MODBUS_RESPONSE_TAG_READ_STATE: {
                     if (model_update_minion_state(pmodel, response.as.state.inputs_map, response.as.state.liquid_levels,
                                                   response.as.state.ptc_adcs, response.as.state.ptc_temperatures)) {
-                        uint8_t vapore = model_get_input_num(pmodel, DIGIN_VAP);
+                        uint8_t vapore = model_digin_read(pmodel, DIGIN_VAP);
                         if (vapore != old_vapore) {
                             if (vapore) {
                                 view_event((view_event_t){.code = VIEW_EVENT_CODE_VAPORE});
                             }
                             old_vapore = vapore;
+                        }
+
+                        if (!model_get_test(pmodel)) {
+                            model_set_relay(pmodel, DIGOUT_RECUPERATOR,
+                                            model_digin_read(pmodel, DIGIN_AIR_FLOW_SWITCH));
                         }
 
                         boiler_control_value_changed(pmodel);
@@ -159,9 +166,11 @@ void controller_manage(model_t *pmodel) {
         ts_minion_refresh = get_millis();
     }
 
-    if (is_expired(ts_1s, get_millis(), 1000UL)) {
-        modbus_write_outputs(model_get_minion_relays(pmodel), model_get_percentuale_aspirazione(pmodel),
-                             model_get_percentuale_soffio(pmodel));
+    if (is_expired(ts_1s, get_millis(), 2000UL)) {
+        // FIXME: pezza per fiera, c'e' da capire come deve funzionare
+        // modbus_write_outputs(model_get_minion_relays(pmodel), model_get_percentuale_aspirazione(pmodel),
+        // model_get_percentuale_soffio(pmodel));
+        update_outputs(NULL, pmodel);
         ts_1s = get_millis();
     }
 
@@ -186,6 +195,15 @@ static void refresh_light(void *mem, void *arg) {
     model_t *pmodel = arg;
     if (!model_get_test(pmodel)) {
         model_set_relay(pmodel, DIGOUT_LUCE, model_get_luce(pmodel));
+    }
+}
+
+
+static void refresh_gun(void *mem, void *arg) {
+    (void)mem;
+    model_t *pmodel = arg;
+    if (!model_get_test(pmodel)) {
+        model_set_relay(pmodel, DIGOUT_GUN, model_get_gun_state(pmodel));
     }
 }
 
@@ -235,7 +253,7 @@ static void refresh_test(void *mem, void *arg) {
         model_set_relay(pmodel, DIGOUT_RISCALDAMENTO_FERRO_2, 0);
         model_set_relay(pmodel, DIGOUT_RISCALDAMENTO_VAPORE, 0);
         model_set_relay(pmodel, DIGOUT_RISCALDAMENTO_PIANO, 0);
-        model_set_relay(pmodel, DIGOUT_ASPIRAZIONE, 0);
+        model_set_relay(pmodel, DIGOUT_RECUPERATOR, 0);
         model_set_test_percentage_suction(pmodel, 0);
         model_set_test_percentage_blow(pmodel, 0);
     } else {
@@ -296,6 +314,11 @@ static uint8_t not_in_test(model_t *pmodel) {
 
 static void update_outputs(void *mem, void *arg) {
     model_t *pmodel = arg;
-    modbus_write_outputs(model_get_minion_relays(pmodel), model_get_percentuale_aspirazione(pmodel),
-                         model_get_percentuale_soffio(pmodel));
+    if (model_get_percentuale_aspirazione(pmodel) > 0) {
+        modbus_write_outputs(model_get_minion_relays(pmodel), model_get_percentuale_aspirazione(pmodel), 0);
+    } else if (model_get_percentuale_soffio(pmodel) > 0) {
+        modbus_write_outputs(model_get_minion_relays(pmodel), model_get_percentuale_soffio(pmodel), 100);
+    } else {
+        modbus_write_outputs(model_get_minion_relays(pmodel), 0, 0);
+    }
 }

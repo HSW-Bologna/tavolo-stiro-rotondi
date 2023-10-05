@@ -12,8 +12,6 @@
 
 enum {
     BACK_BTN_ID,
-    PREV_BTN_ID,
-    NEXT_BTN_ID,
     ADC_PLUS_BTN_ID,
     ADC_MINUS_BTN_ID,
     HYSTERESIS_PLUS_BTN_ID,
@@ -41,7 +39,7 @@ static void open_page(model_t *pmodel, void *args) {
     struct page_data *pdata = args;
     lv_obj_t         *cont, *lbl, *btn;
 
-    cont = view_common_create_title(lv_scr_act(), "Calibrazione caldaia", BACK_BTN_ID, PREV_BTN_ID, NEXT_BTN_ID);
+    cont = view_common_create_title(lv_scr_act(), "Parametri", BACK_BTN_ID, -1, -1);
 
     cont = lv_obj_create(lv_scr_act());
     lv_obj_set_size(cont, LV_HOR_RES, LV_VER_RES - 64);
@@ -121,16 +119,6 @@ static view_message_t page_event(model_t *pmodel, void *args, view_event_t event
                             model_set_test(pmodel, 0);
                             break;
 
-                        case PREV_BTN_ID:
-                            msg.vmsg.code = VIEW_PAGE_MESSAGE_CODE_SWAP;
-                            msg.vmsg.page = &page_test_analogs;
-                            break;
-
-                        case NEXT_BTN_ID:
-                            msg.vmsg.code = VIEW_PAGE_MESSAGE_CODE_SWAP;
-                            msg.vmsg.page = &page_test_fans;
-                            break;
-
                         case ADC_MINUS_BTN_ID:
                             if (pmodel->configuration.boiler_adc_threshold > 0) {
                                 pmodel->configuration.boiler_adc_threshold -= 10;
@@ -197,7 +185,7 @@ static void page_update(model_t *pmodel, struct page_data *pdata) {
 }
 
 
-const pman_page_t page_temp_parameter = {
+const pman_page_t page_parameters = {
     .create        = create_page,
     .destroy       = view_destroy_all,
     .open          = open_page,

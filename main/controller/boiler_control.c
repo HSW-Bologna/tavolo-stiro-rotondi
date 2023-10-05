@@ -101,7 +101,7 @@ static int off_event_manager(model_t *pmodel, boiler_control_event_t event) {
             } else {
                 ESP_LOGI(TAG, "Caldaia vuota, riempo...");
                 pump_update(pmodel, 1);
-                boiler_update(pmodel, 0);
+                boiler_update(pmodel, 1);
                 return BOILER_SM_STATE_FILLING;
             }
     }
@@ -122,7 +122,7 @@ static int filling_event_manager(model_t *pmodel, boiler_control_event_t event) 
             break;
 
         case BOILER_CONTROL_EVENT_REFRESH:
-            boiler_update(pmodel, 0);
+            boiler_update(pmodel, 1);
             pump_update(pmodel, 1);
             break;
 
@@ -214,7 +214,7 @@ static int hysteresis_event_manager(model_t *pmodel, boiler_control_event_t even
             break;
 
         case BOILER_CONTROL_EVENT_REFRESH:
-            boiler_update(pmodel, 0);
+            boiler_update(pmodel, 1);
             pump_update(pmodel, 0);
             break;
 

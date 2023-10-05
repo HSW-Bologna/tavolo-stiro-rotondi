@@ -7,99 +7,88 @@
 #define PHASE_CUT_SOFFIO      PHASE_CUT_FAN_1
 #define PHASE_CUT_ASPIRAZIONE PHASE_CUT_FAN_2
 
+#define SWITCH_DELAY_MS 100UL
+
 
 typedef enum {
-    STATE_NO_FOTOCELLULA = 0,
-    STATE_WAITING_FOR_FOTOCELLULA,
-    STATE_ASPIRAZIONE,
-    STATE_SOFFIO,
+    STATE_STOPPED = 0,
+    STATE_SUCTION_DELAY,
+    STATE_SUCTION,
+    STATE_BLOWING_DELAY,
+    STATE_BLOWING,
 } state_t;
 
 
 static const char *TAG = "Fan control";
 
-static unsigned long timestamp = 0;     // TODO: change this into a proper state machine
-static state_t       state     = STATE_NO_FOTOCELLULA;
+static unsigned long timestamp = 0;
+static state_t       state     = STATE_STOPPED;
 
 
 void fan_control(model_t *pmodel) {
     (void)TAG;
 
-    uint8_t fotocellula = 0;
-    switch (model_get_fotocellula(pmodel)) {
-        case FOTOCELLULA_SX:
-            fotocellula = model_digin_read(pmodel, DIGIN_FOTOCELLULA_SX);
-            break;
-        case FOTOCELLULA_DX:
-            fotocellula = model_digin_read(pmodel, DIGIN_FOTOCELLULA_DX);
-            break;
-    };
-    uint8_t pedale = model_digin_read(pmodel, DIGIN_PEDALE);
+    uint8_t suction_pedal = model_digin_read(pmodel, DIGIN_SUCTION_PEDAL);
+    uint8_t blowing_pedal = model_digin_read(pmodel, DIGIN_BLOWING_PEDAL);
 
     switch (state) {
-        case STATE_NO_FOTOCELLULA:
-            if (fotocellula && !pedale) {
-                state = STATE_WAITING_FOR_FOTOCELLULA;
-            } else if (pedale) {
-                state = STATE_SOFFIO;
-            } else {
-                timestamp = get_millis();
+        case STATE_STOPPED:
+            if (suction_pedal) {
+                state = is_expired(timestamp, get_millis(), SWITCH_DELAY_MS) ? STATE_SUCTION : STATE_SUCTION_DELAY;
+            } else if (blowing_pedal) {
+                state = is_expired(timestamp, get_millis(), SWITCH_DELAY_MS) ? STATE_BLOWING : STATE_BLOWING_DELAY;
             }
             break;
 
-        case STATE_WAITING_FOR_FOTOCELLULA:
-            if (fotocellula && !pedale) {
-                if (is_expired(timestamp, get_millis(), 100UL)) {
-                    state     = STATE_ASPIRAZIONE;
-                    timestamp = get_millis();
+        case STATE_BLOWING_DELAY:
+            if (is_expired(timestamp, get_millis(), SWITCH_DELAY_MS)) {
+                state = STATE_BLOWING;
+            }
+            break;
+
+        case STATE_BLOWING:
+            timestamp = get_millis();
+            if (!blowing_pedal) {
+                if (suction_pedal) {
+                    state = STATE_SUCTION_DELAY;
+                } else {
+                    state = STATE_STOPPED;
                 }
-            } else if (pedale) {
-                state = STATE_SOFFIO;
-            } else {
-                state = STATE_NO_FOTOCELLULA;
             }
             break;
 
-        case STATE_ASPIRAZIONE:
-            if (fotocellula && !pedale) {
-            } else if (pedale) {
-                state = STATE_SOFFIO;
-            } else {
-                state = STATE_NO_FOTOCELLULA;
+        case STATE_SUCTION_DELAY:
+            if (is_expired(timestamp, get_millis(), SWITCH_DELAY_MS)) {
+                state = STATE_SUCTION;
             }
             break;
 
-        case STATE_SOFFIO:
-            if (fotocellula && !pedale) {
-                state     = STATE_NO_FOTOCELLULA;
-                timestamp = get_millis();
-            } else if (pedale) {
-            } else {
-                state = STATE_NO_FOTOCELLULA;
+        case STATE_SUCTION:
+            timestamp = get_millis();
+            if (blowing_pedal) {     // Blowing fan takes precedence
+                state = STATE_BLOWING_DELAY;
+            } else if (!suction_pedal) {
+                state = STATE_STOPPED;
             }
             break;
     }
 
     switch (state) {
-        case STATE_WAITING_FOR_FOTOCELLULA:
-        case STATE_NO_FOTOCELLULA:
+        case STATE_SUCTION_DELAY:
+        case STATE_BLOWING_DELAY:
+        case STATE_STOPPED:
             model_set_aspirazione_on(pmodel, 0);
             model_set_soffio_on(pmodel, 0);
             break;
 
-        case STATE_ASPIRAZIONE:
+        case STATE_SUCTION:
             model_set_aspirazione_on(pmodel, 1);
             model_set_soffio_on(pmodel, 0);
             break;
 
-        case STATE_SOFFIO:
+        case STATE_BLOWING:
             model_set_aspirazione_on(pmodel, 0);
             model_set_soffio_on(pmodel, 1);
             break;
-    }
-
-
-    if (!model_get_test(pmodel)) {
-        model_set_relay(pmodel, DIGOUT_ASPIRAZIONE, model_get_aspirazione_on(pmodel));
     }
 }

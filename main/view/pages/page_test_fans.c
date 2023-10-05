@@ -86,7 +86,7 @@ static view_message_t page_event(model_t *pmodel, void *args, view_event_t event
                             model_set_test_percentage_suction(pmodel, 0);
                             model_set_test_percentage_blow(pmodel, 0);
                             msg.vmsg.code = VIEW_PAGE_MESSAGE_CODE_SWAP;
-                            msg.vmsg.page = &page_temp_parameter;
+                            msg.vmsg.page = &page_test_analogs;
                             break;
 
                         case NEXT_BTN_ID:
@@ -97,6 +97,8 @@ static view_message_t page_event(model_t *pmodel, void *args, view_event_t event
                             break;
 
                         case BACK_BTN_ID:
+                            model_set_test_percentage_suction(pmodel, 0);
+                            model_set_test_percentage_blow(pmodel, 0);
                             model_set_test(pmodel, 0);
                             msg.vmsg.code = VIEW_PAGE_MESSAGE_CODE_BACK;
                             break;
@@ -107,11 +109,13 @@ static view_message_t page_event(model_t *pmodel, void *args, view_event_t event
                 case LV_EVENT_VALUE_CHANGED: {
                     switch (event.data.id) {
                         case SLIDER_SUCTION_ID:
+                            model_set_test_percentage_blow(pmodel, 0);
                             model_set_test_percentage_suction(pmodel, lv_slider_get_value(pdata->slider_suction));
                             page_update(pmodel, pdata);
                             break;
                         case SLIDER_BLOW_ID:
                             model_set_test_percentage_blow(pmodel, lv_slider_get_value(pdata->slider_blow));
+                            model_set_test_percentage_suction(pmodel, 0);
                             page_update(pmodel, pdata);
                             break;
                     }

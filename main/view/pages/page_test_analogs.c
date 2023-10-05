@@ -82,7 +82,7 @@ static view_message_t page_event(model_t *pmodel, void *args, view_event_t event
 
                         case NEXT_BTN_ID:
                             msg.vmsg.code = VIEW_PAGE_MESSAGE_CODE_SWAP;
-                            msg.vmsg.page = &page_temp_parameter;
+                            msg.vmsg.page = &page_test_fans;
                             break;
                     }
                     break;
@@ -105,9 +105,9 @@ static view_message_t page_event(model_t *pmodel, void *args, view_event_t event
 static void page_update(model_t *pmodel, struct page_data *pdata) {
     lv_label_set_text_fmt(
         pdata->lbl, "Temp. tavolo: %i C [%i]\nTemp. bracciolo: %i C [%i]\n\nLivello 1: %i\nLivello 2: %i",
-        model_get_temperatura_tavolo(pmodel), model_get_adc_ptc(pmodel, PTC_TEMP1), model_get_temperatura_bracciolo(pmodel),
-        model_get_adc_ptc(pmodel, PTC_TEMP2), model_get_probe_level(pmodel, LIQUID_LEVEL_PROBE_1),
-        model_get_probe_level(pmodel, LIQUID_LEVEL_PROBE_2));
+        model_get_temperatura_tavolo(pmodel), model_get_adc_ptc(pmodel, PTC_TEMP2),
+        model_get_temperatura_bracciolo(pmodel), model_get_adc_ptc(pmodel, PTC_TEMP1),
+        model_get_probe_level(pmodel, LIQUID_LEVEL_PROBE_1), model_get_probe_level(pmodel, LIQUID_LEVEL_PROBE_2));
 }
 
 

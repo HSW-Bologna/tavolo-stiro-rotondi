@@ -18,6 +18,7 @@ void model_init(model_t *pmodel) {
 
     pmodel->configuration.language              = 0;
     pmodel->run.luce                            = 0;
+    pmodel->run.gun_state                       = 0;
     pmodel->run.test                            = 0;
     pmodel->run.ferro_1                         = 0;
     pmodel->run.ferro_2                         = 0;
@@ -145,6 +146,8 @@ uint8_t model_should_deactivate_table(model_t *pmodel) {
 
 uint8_t model_should_activate_arm(model_t *pmodel) {
     assert(pmodel != NULL);
+    return model_get_richiesta_temperatura_bracciolo(pmodel);
+    // FIXME: pezze fiera
     if (model_get_richiesta_temperatura_bracciolo(pmodel)) {
         return (model_get_temperatura_bracciolo(pmodel) + model_get_isteresi_bracciolo(pmodel) <
                 model_get_setpoint_temperatura_bracciolo(pmodel));
@@ -156,6 +159,8 @@ uint8_t model_should_activate_arm(model_t *pmodel) {
 
 uint8_t model_should_deactivate_arm(model_t *pmodel) {
     assert(pmodel != NULL);
+    return !model_get_richiesta_temperatura_bracciolo(pmodel);
+    // FIXME: pezze fiera
     if (model_get_richiesta_temperatura_bracciolo(pmodel)) {
         return (model_get_temperatura_bracciolo(pmodel) >
                 model_get_setpoint_temperatura_bracciolo(pmodel) + model_get_isteresi_bracciolo(pmodel));
@@ -167,19 +172,17 @@ uint8_t model_should_deactivate_arm(model_t *pmodel) {
 
 uint8_t model_liquid_threshold_1_reached(model_t *pmodel) {
     assert(pmodel != NULL);
-    return pmodel->minion.liquid_levels[0] < ADC_PROBE_1_THRESHOLD;
+    return 1;
+    // Fixme: pezze fiera
+    // return pmodel->minion.liquid_levels[0] < ADC_PROBE_1_THRESHOLD;
 }
 
 
 uint8_t model_boiler_pieno(model_t *pmodel) {
     assert(pmodel != NULL);
-    return pmodel->minion.liquid_levels[1] < model_get_boiler_adc_threshold(pmodel);
-}
-
-
-uint8_t model_get_input_num(model_t *pmodel, size_t input) {
-    assert(pmodel != NULL);
-    return pmodel->minion.inputs[input];
+    return 1;
+    // Fixme: pezze fiera
+    // return pmodel->minion.liquid_levels[1] < model_get_boiler_adc_threshold(pmodel);
 }
 
 
@@ -238,13 +241,13 @@ uint16_t model_get_probe_level(model_t *pmodel, liquid_level_probe_t probe) {
 
 int16_t model_get_temperatura_tavolo(model_t *pmodel) {
     assert(pmodel != NULL);
-    return pmodel->minion.ptc_temperatures[PTC_TEMP1];
+    return pmodel->minion.ptc_temperatures[PTC_TEMP2];
 }
 
 
 int16_t model_get_temperatura_bracciolo(model_t *pmodel) {
     assert(pmodel != NULL);
-    return pmodel->minion.ptc_temperatures[PTC_TEMP2];
+    return pmodel->minion.ptc_temperatures[PTC_TEMP1];
 }
 
 

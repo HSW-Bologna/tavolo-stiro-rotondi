@@ -1,4 +1,4 @@
-#include <stdlib.h>
+#include <stdlib.h>page_main
 #include "lvgl.h"
 #include "model/model.h"
 #include "view/view.h"
@@ -31,6 +31,8 @@ LV_IMG_DECLARE(img_boiler_off_2);
 LV_IMG_DECLARE(img_boiler_on_2);
 LV_IMG_DECLARE(img_boiler_off_3);
 LV_IMG_DECLARE(img_boiler_on_3);
+LV_IMG_DECLARE(img_steam_brush_on);
+LV_IMG_DECLARE(img_steam_brush_off);
 LV_IMG_DECLARE(img_fotocellula_sx);
 LV_IMG_DECLARE(img_fotocellula_dx);
 LV_IMG_DECLARE(img_luce_off);
@@ -378,7 +380,7 @@ static view_message_t page_event(model_t *pmodel, void *args, view_event_t event
                         case MENU_BTN_ID: {
                             view_page_message_t pw_msg = {
                                 .code = VIEW_PAGE_MESSAGE_CODE_SWAP,
-                                .page = &page_test_output,
+                                .page = &page_menu,
                             };
                             password_page_options_t *opts =
                                 view_common_default_password_page_options(pw_msg, (const char *)APP_CONFIG_PASSWORD);
@@ -404,7 +406,8 @@ static view_message_t page_event(model_t *pmodel, void *args, view_event_t event
                             break;
 
                         case FOTOCELLULA_BTN_ID:
-                            model_toggle_fotocellula(pmodel);
+                            // model_toggle_fotocellula(pmodel);
+                            model_toggle_gun(pmodel);
                             update_page(pmodel, pdata, 0);
                             break;
 
@@ -502,6 +505,8 @@ static view_message_t page_event(model_t *pmodel, void *args, view_event_t event
                             break;
 
                         case BRACCIOLO_BTN_ID:
+                            // FIXME: pezza fiera
+                            break;
                             if (pdata->editing_target == EDITING_TARGET_NONE) {
                                 pdata->editing_target = EDITING_TARGET_TEMPERATURA_BRACCIOLO;
                                 lv_anim_start(&pdata->anim_popup_bracciolo);
@@ -684,6 +689,8 @@ static void update_page(model_t *pmodel, struct page_data *pdata, uint8_t restar
     view_common_img_set_src(pdata->img_bracciolo_popup,
                             model_get_richiesta_temperatura_bracciolo(pmodel) ? &img_bracciolo_on : &img_bracciolo_off);
 
+    view_common_set_checked(pdata->btn_ferro_1, model_get_ferro_1(pmodel));
+    view_common_set_checked(pdata->btn_ferro_2, model_get_ferro_2(pmodel));
     view_common_img_set_src(pdata->img_ferro_1, model_get_ferro_1(pmodel) ? &img_ferro_1_on : &img_ferro_1_off);
     view_common_img_set_src(pdata->img_ferro_2, model_get_ferro_2(pmodel) ? &img_ferro_2_on : &img_ferro_2_off);
 
@@ -704,6 +711,10 @@ static void update_page(model_t *pmodel, struct page_data *pdata, uint8_t restar
                 start_background_animations(pdata);
             }
 
+            view_common_img_set_src(lv_obj_get_child(pdata->btn_fotocellula, 0),
+                                    model_get_gun_state(pmodel) ? &img_steam_brush_on : &img_steam_brush_off);
+            view_common_set_checked(pdata->btn_fotocellula, model_get_gun_state(pmodel));
+#if 0
             switch (model_get_fotocellula(pmodel)) {
                 case FOTOCELLULA_SX:
                     view_common_img_set_src(lv_obj_get_child(pdata->btn_fotocellula, 0), &img_fotocellula_sx);
@@ -711,7 +722,8 @@ static void update_page(model_t *pmodel, struct page_data *pdata, uint8_t restar
                 case FOTOCELLULA_DX:
                     view_common_img_set_src(lv_obj_get_child(pdata->btn_fotocellula, 0), &img_fotocellula_dx);
                     break;
-            }
+    }
+#endif
             break;
 
         case EDITING_TARGET_TEMPERATURA_BRACCIOLO:

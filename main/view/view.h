@@ -31,7 +31,7 @@ void        view_event(view_event_t event);
 
 
 extern const pman_page_t page_main, page_test_output, page_test_input, page_password, page_test_analogs,
-    page_temp_parameter, page_test_fans;
+    page_parameters, page_test_fans, page_menu;
 
 
 #endif

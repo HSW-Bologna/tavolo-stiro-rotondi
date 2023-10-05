@@ -111,9 +111,14 @@ def main():
 
     gel_env = env
     gel_selected = ["pagemanager", "collections",
-                    "parameter", "timer", "data_structures"]
+                    "timer", "data_structures"]
     (gel, include) = SConscript(
         f'{COMPONENTS}/generic_embedded_libs/SConscript', exports=['gel_env', 'gel_selected'])
+    env['CPPPATH'] += [include]
+
+    c_parameter_env = env
+    (c_parameter, include) = SConscript(
+        f'{COMPONENTS}/c-parameter/SConscript', exports=['c_parameter_env'])
     env['CPPPATH'] += [include]
 
     sources = Glob(f'{SIMULATOR}/*.c')
@@ -135,7 +140,7 @@ def main():
     sources += [File(f'{COMPONENTS}/liblightmodbus-esp/src/impl.c')]
 
     prog = env.Program(PROGRAM, sdkconfig + sources +
-                       freertos + gel + i2c)
+                       freertos + gel + i2c + c_parameter)
     env.Depends(prog, translations)
     PhonyTargets("run", f"./{PROGRAM}", prog, env)
     compileDB = env.CompilationDatabase('build/compile_commands.json')

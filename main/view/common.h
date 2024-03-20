@@ -6,6 +6,10 @@
 #include "model/model.h"
 
 
+#define COL_SIZE 95
+#define ROW_SIZE 158
+
+
 typedef struct {
     lv_obj_t *btn;
     lv_obj_t *lbl;
@@ -25,6 +29,8 @@ void                     view_common_set_hidden(lv_obj_t *obj, int hidden);
 void                     view_common_img_set_src(lv_obj_t *img, const lv_img_dsc_t *dsc);
 void                     view_common_set_checked(lv_obj_t *obj, uint8_t checked);
 lv_obj_t *view_common_create_title(lv_obj_t *root, const char *text, int back_id, int prev_id, int next_id);
+lv_obj_t *view_common_base_button_create(lv_obj_t *root, int id);
+lv_obj_t *view_common_image_button_create(lv_obj_t *root, const lv_img_dsc_t *img_dsc, int id);
 
 
 #endif

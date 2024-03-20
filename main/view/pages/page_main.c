@@ -1,4 +1,4 @@
-#include <stdlib.h>page_main
+#include <stdlib.h>
 #include "lvgl.h"
 #include "model/model.h"
 #include "view/view.h"
@@ -45,6 +45,7 @@ LV_IMG_DECLARE(img_tavolo_on);
 LV_IMG_DECLARE(img_ventola);
 LV_IMG_DECLARE(img_bolle_2);
 LV_IMG_DECLARE(img_bolle_3);
+LV_IMG_DECLARE(img_power);
 
 #define ANIM_VAPORE_PERIOD 1200
 #define POPUP_WIDTH        360
@@ -56,7 +57,7 @@ LV_IMG_DECLARE(img_bolle_3);
 enum {
     FERRO_1_BTN_ID,
     FERRO_2_BTN_ID,
-    FOTOCELLULA_BTN_ID,
+    STEAM_GUN_BTN_ID,
     TAVOLO_BTN_ID,
     BRACCIOLO_BTN_ID,
     SOFFIO_BTN_ID,
@@ -79,6 +80,8 @@ enum {
     SOFFIO_POPUP_BTN_ID,
     SUCTION_POPUP_BTN_ID,
     BTN_DISMISS_ALARM_ID,
+    SETTINGS_CONT_ID,
+    POWER_BTN_ID,
     BLANKET_ID,
 };
 
@@ -100,7 +103,7 @@ struct page_data {
     lv_obj_t *btn_aspirazione;
     lv_obj_t *btn_boiler;
     lv_obj_t *btn_soffio;
-    lv_obj_t *btn_fotocellula;
+    lv_obj_t *btn_steam_gun;
     lv_obj_t *btn_luce;
     lv_obj_t *btn_menu;
 
@@ -146,6 +149,8 @@ struct page_data {
     lv_obj_t *popup_alarm;
     lv_obj_t *lbl_alarm;
 
+    lv_obj_t *cont_menu_btn;
+
     lv_anim_t anim_ventola_aspirazione;
     lv_anim_t anim_ventola_soffio;
     lv_anim_t anim_ventola_soffio_popup;
@@ -165,8 +170,6 @@ struct page_data {
 };
 
 
-static lv_obj_t *base_button(lv_obj_t *root, size_t col, size_t row, int id);
-static lv_obj_t *image_button(lv_obj_t *root, const lv_img_dsc_t *img, size_t col, size_t row, int id);
 static lv_obj_t *heat_image_button(lv_obj_t *root, const lv_img_dsc_t *img_dsc, uint32_t h_shift, size_t col,
                                    size_t row, int id);
 static lv_obj_t *iron_image_button(lv_obj_t *root, const lv_img_dsc_t *img_dsc, size_t col, size_t row, int id);
@@ -182,6 +185,7 @@ static lv_obj_t *popup_fan_create(lv_obj_t *root, lv_obj_t **slider, lv_obj_t **
 static void      pause_background_animations(struct page_data *pdata);
 static void      start_background_animations(struct page_data *pdata);
 static lv_obj_t *popup_alarm_create(lv_obj_t *root, lv_obj_t **lbl, int dismiss_id);
+static void      drag_event_handler(lv_event_t *e);
 
 
 static const char *TAG = "PageMain";
@@ -203,47 +207,51 @@ static void *create_page(model_t *pmodel, void *extra) {
 static void open_page(model_t *pmodel, void *args) {
     struct page_data *pdata = args;
     lv_obj_t         *btn, *img;
+    ESP_LOGI(TAG, "Open");
 
     pdata->ignore_click   = 0;
     pdata->editing_target = EDITING_TARGET_NONE;
     pdata->soffio_on      = !model_get_soffio_on(pmodel);
     pdata->aspirazione_on = !model_get_aspirazione_on(pmodel);
 
-#define COL_SIZE 95
-#define ROW_SIZE 158
+    lv_obj_clear_flag(lv_scr_act(), LV_OBJ_FLAG_SCROLLABLE);
 
-    static lv_coord_t col_dsc[] = {COL_SIZE, COL_SIZE, COL_SIZE, COL_SIZE, COL_SIZE, LV_GRID_TEMPLATE_LAST};
-    static lv_coord_t row_dsc[] = {ROW_SIZE, ROW_SIZE, LV_GRID_TEMPLATE_LAST};
-
-    /*Create a container with grid*/
+    /*Create a container with flex*/
     lv_obj_t *cont = lv_obj_create(lv_scr_act());
-    lv_obj_set_style_grid_column_dsc_array(cont, col_dsc, 0);
-    lv_obj_set_style_grid_row_dsc_array(cont, row_dsc, 0);
     lv_obj_set_size(cont, LV_PCT(100), LV_PCT(100));
-    lv_obj_set_layout(cont, LV_LAYOUT_GRID);
+    lv_obj_set_layout(cont, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(cont, LV_FLEX_FLOW_COLUMN_WRAP);
+    lv_obj_set_flex_align(cont, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
     lv_obj_add_style(cont, (lv_style_t *)&style_padless_cont, LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_gap(cont, 2, LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_right(cont, 6, LV_STATE_DEFAULT);
 
+    // Bottone Tavolo
     pdata->btn_tavolo        = heat_image_button(cont, &img_tavolo_off, 24, 0, 0, TAVOLO_BTN_ID);
     pdata->img_tavolo        = lv_obj_get_child(pdata->btn_tavolo, 0);
     pdata->img_calore_tavolo = lv_obj_get_child(pdata->btn_tavolo, 1);
     lv_obj_add_flag(pdata->btn_tavolo, LV_OBJ_FLAG_CHECKABLE);
 
+    // Bottone Bracciolo
     pdata->btn_bracciolo        = heat_image_button(cont, &img_bracciolo_off, 32, 0, 1, BRACCIOLO_BTN_ID);
     pdata->img_bracciolo        = lv_obj_get_child(pdata->btn_bracciolo, 0);
     pdata->img_calore_bracciolo = lv_obj_get_child(pdata->btn_bracciolo, 1);
     lv_obj_add_flag(pdata->btn_bracciolo, LV_OBJ_FLAG_CHECKABLE);
 
+    // Bottone Ferro 1
     pdata->btn_ferro_1        = iron_image_button(cont, &img_ferro_1_off, 1, 0, FERRO_1_BTN_ID);
     pdata->img_ferro_1        = lv_obj_get_child(pdata->btn_ferro_1, 0);
     pdata->img_vapore_ferro_1 = lv_obj_get_child(pdata->btn_ferro_1, 1);
     lv_obj_add_flag(pdata->btn_ferro_1, LV_OBJ_FLAG_CHECKABLE);
 
+    // Bottone Ferro 2
     pdata->btn_ferro_2        = iron_image_button(cont, &img_ferro_2_off, 1, 1, FERRO_2_BTN_ID);
     pdata->img_ferro_2        = lv_obj_get_child(pdata->btn_ferro_2, 0);
     pdata->img_vapore_ferro_2 = lv_obj_get_child(pdata->btn_ferro_2, 1);
     lv_obj_add_flag(pdata->btn_ferro_2, LV_OBJ_FLAG_CHECKABLE);
 
-    btn = base_button(cont, 2, 0, SUCTION_BTN_ID);
+    // Bottone Aspirazione
+    btn = view_common_base_button_create(cont, SUCTION_BTN_ID);
     img = lv_img_create(btn);
     lv_img_set_src(img, &img_ventola);
     lv_obj_align(img, LV_ALIGN_BOTTOM_MID, 0, 0);
@@ -255,7 +263,22 @@ static void open_page(model_t *pmodel, void *args) {
     pdata->btn_aspirazione      = btn;
     lv_obj_add_flag(pdata->btn_aspirazione, LV_OBJ_FLAG_CHECKABLE);
 
-    pdata->btn_boiler = image_button(cont, &img_boiler_off_3, 2, 1, BOILER_BTN_ID);
+    // Bottone Soffio
+    btn = view_common_base_button_create(cont, SOFFIO_BTN_ID);
+    img = lv_img_create(btn);
+    lv_img_set_src(img, &img_ventola);
+    lv_obj_align(img, LV_ALIGN_TOP_MID, 0, 0);
+    pdata->img_ventola_soffio = img;
+    img                       = lv_img_create(btn);
+    lv_img_set_src(img, &img_aria);
+    lv_obj_align(img, LV_ALIGN_BOTTOM_MID, 0, 0);
+    pdata->img_aria_soffio = img;
+    pdata->btn_soffio      = btn;
+    lv_obj_add_flag(pdata->btn_soffio, LV_OBJ_FLAG_CHECKABLE);
+
+
+    // Bottone Boiler
+    pdata->btn_boiler = view_common_image_button_create(cont, &img_boiler_off_3, BOILER_BTN_ID);
     pdata->img_boiler = lv_obj_get_child(pdata->btn_boiler, 0);
 
     static const lv_img_dsc_t *anim_imgs[3] = {
@@ -273,29 +296,53 @@ static void open_page(model_t *pmodel, void *args) {
 
     lv_obj_add_flag(pdata->btn_boiler, LV_OBJ_FLAG_CHECKABLE);
 
-    btn = base_button(cont, 3, 0, SOFFIO_BTN_ID);
-    img = lv_img_create(btn);
-    lv_img_set_src(img, &img_ventola);
-    lv_obj_align(img, LV_ALIGN_TOP_MID, 0, 0);
-    pdata->img_ventola_soffio = img;
-    img                       = lv_img_create(btn);
-    lv_img_set_src(img, &img_aria);
-    lv_obj_align(img, LV_ALIGN_BOTTOM_MID, 0, 0);
-    pdata->img_aria_soffio = img;
-    pdata->btn_soffio      = btn;
-    lv_obj_add_flag(pdata->btn_soffio, LV_OBJ_FLAG_CHECKABLE);
+    // Bottone Fotocellula
+    pdata->btn_steam_gun = view_common_image_button_create(cont, &img_fotocellula_sx, STEAM_GUN_BTN_ID);
 
-    pdata->btn_fotocellula = image_button(cont, &img_fotocellula_sx, 4, 1, FOTOCELLULA_BTN_ID);
-
-    pdata->btn_luce = image_button(cont, &img_luce_off, 3, 1, LUCE_BTN_ID);
+    // Bottone Luce
+    pdata->btn_luce = view_common_image_button_create(cont, &img_luce_off, LUCE_BTN_ID);
     lv_obj_add_flag(pdata->btn_luce, LV_OBJ_FLAG_CHECKABLE);
-
-    pdata->btn_menu = image_button(cont, &img_menu, 4, 0, MENU_BTN_ID);
 
     pdata->anim_ventola_aspirazione = fan_animation(pdata->img_ventola_aspirazione, 250);
 
     pdata->anim_ventola_soffio = fan_animation(pdata->img_ventola_soffio, 2000);
     pdata->anim_suction_fan    = fan_animation(pdata->img_ventola_aspirazione, 2000);
+
+    // Bottone Spegnimento
+    view_common_image_button_create(cont, &img_power, POWER_BTN_ID);
+
+    // Bottone Menu
+    lv_obj_t *settings_cont = lv_obj_create(lv_scr_act());
+    lv_obj_set_size(settings_cont, COL_SIZE + 40, LV_VER_RES);
+    lv_obj_align(settings_cont, LV_ALIGN_RIGHT_MID, COL_SIZE + 24, 0);
+    lv_obj_add_style(settings_cont, (lv_style_t *)&style_transparent_cont, LV_STATE_DEFAULT);
+    lv_obj_add_event_cb(settings_cont, drag_event_handler, LV_EVENT_PRESSING, pdata);
+    view_register_object_default_callback(settings_cont, SETTINGS_CONT_ID);
+    // lv_obj_add_style(settings_cont, (lv_style_t *)&style_transparent_cont, LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_all(settings_cont, 0, LV_STATE_DEFAULT);
+    lv_obj_clear_flag(settings_cont, LV_OBJ_FLAG_SCROLLABLE);
+    pdata->cont_menu_btn = settings_cont;
+
+    // Bottone Menu
+    pdata->btn_menu = view_common_image_button_create(settings_cont, &img_menu, MENU_BTN_ID);
+    lv_obj_clear_flag(pdata->btn_menu, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_add_flag(pdata->btn_menu, LV_OBJ_FLAG_EVENT_BUBBLE);
+    lv_obj_align(pdata->btn_menu, LV_ALIGN_LEFT_MID, 28, -ROW_SIZE / 4);
+
+    lv_obj_t *cont_flag = lv_obj_create(settings_cont);
+    lv_obj_set_style_pad_all(cont_flag, 0, LV_STATE_DEFAULT);
+    lv_obj_set_size(cont_flag, 200, LV_VER_RES);
+    lv_obj_add_flag(cont_flag, LV_OBJ_FLAG_EVENT_BUBBLE);
+    lv_obj_set_style_radius(cont_flag, 32, LV_STATE_DEFAULT);
+
+    lv_obj_t *lbl = lv_label_create(cont_flag);
+    lv_obj_set_style_text_font(lbl, STYLE_FONT_BIG, LV_STATE_DEFAULT);
+    lv_label_set_text(lbl, LV_SYMBOL_RIGHT);
+    lv_obj_align(lbl, LV_ALIGN_LEFT_MID, 16, ROW_SIZE / 2 + 16);
+
+    lv_obj_align(cont_flag, LV_ALIGN_LEFT_MID, 24, 0);
+
+    lv_obj_move_foreground(pdata->btn_menu);
 
     lv_obj_t *blanket = lv_obj_create(lv_scr_act());
     lv_obj_set_size(blanket, LV_PCT(100), LV_PCT(100));
@@ -314,7 +361,6 @@ static void open_page(model_t *pmodel, void *args) {
     lv_obj_align(popup, LV_ALIGN_TOP_MID, 0, -POPUP_HEIGHT);
     pdata->anim_popup_tavolo = slide_in_animation(popup, -POPUP_HEIGHT, (LV_VER_RES - POPUP_HEIGHT) / 2);
     pdata->popup_tavolo      = popup;
-
 
     popup = popup_temperature_create(pdata->blanket, &pdata->arc_setpoint_bracciolo, &pdata->lbl_setpoint_bracciolo,
                                      &pdata->img_bracciolo_popup, &img_bracciolo_off, SETPOINT_BRACCIOLO_PLUS_BTN_ID,
@@ -378,6 +424,11 @@ static view_message_t page_event(model_t *pmodel, void *args, view_event_t event
                             break;
 
                         case MENU_BTN_ID: {
+                            if (pdata->ignore_click) {
+                                pdata->ignore_click = 0;
+                                break;
+                            }
+
                             view_page_message_t pw_msg = {
                                 .code = VIEW_PAGE_MESSAGE_CODE_SWAP,
                                 .page = &page_menu,
@@ -405,8 +456,7 @@ static view_message_t page_event(model_t *pmodel, void *args, view_event_t event
                             update_page(pmodel, pdata, 0);
                             break;
 
-                        case FOTOCELLULA_BTN_ID:
-                            // model_toggle_fotocellula(pmodel);
+                        case STEAM_GUN_BTN_ID:
                             model_toggle_gun(pmodel);
                             update_page(pmodel, pdata, 0);
                             break;
@@ -515,6 +565,12 @@ static view_message_t page_event(model_t *pmodel, void *args, view_event_t event
                                 pdata->ignore_click = 1;
                             }
                             break;
+
+                        case POWER_BTN_ID:
+                            pmodel->run.machine_state = MACHINE_STATE_STANDBY;
+                            msg.vmsg.code             = VIEW_PAGE_MESSAGE_CODE_CHANGE_PAGE;
+                            msg.vmsg.page             = &page_standby;
+                            break;
                     }
                     break;
                 }
@@ -609,6 +665,29 @@ static view_message_t page_event(model_t *pmodel, void *args, view_event_t event
                         case SUCTION_BTN_ID:
                             update_page(pmodel, pdata, 0);
                             break;
+
+                        case SETTINGS_CONT_ID: {
+                            lv_obj_t  *obj = pdata->cont_menu_btn;
+                            lv_coord_t x   = lv_obj_get_x(obj);
+
+                            if (x >= LV_HOR_RES - COL_SIZE && x <= LV_HOR_RES) {
+                                lv_obj_align(obj, LV_ALIGN_RIGHT_MID, COL_SIZE + 16, 0);
+                            } else {
+                                lv_obj_align(obj, LV_ALIGN_RIGHT_MID, 8, 0);
+
+                                view_page_message_t pw_msg = {
+                                    .code = VIEW_PAGE_MESSAGE_CODE_SWAP,
+                                    .page = &page_menu,
+                                };
+                                password_page_options_t *opts = view_common_default_password_page_options(
+                                    pw_msg, (const char *)APP_CONFIG_PASSWORD);
+                                msg.vmsg.code  = VIEW_PAGE_MESSAGE_CODE_CHANGE_PAGE_EXTRA;
+                                msg.vmsg.extra = opts;
+                                msg.vmsg.page  = &page_password;
+                                break;
+                            }
+                            break;
+                        }
                     }
                     break;
                 }
@@ -628,6 +707,13 @@ static view_message_t page_event(model_t *pmodel, void *args, view_event_t event
 
 
 static void update_page(model_t *pmodel, struct page_data *pdata, uint8_t restart_animations) {
+    view_common_set_hidden(pdata->btn_luce, !pmodel->configuration.light_enabled);
+    view_common_set_hidden(pdata->btn_ferro_2, !pmodel->configuration.second_iron_enabled);
+    view_common_set_hidden(pdata->btn_soffio, !model_is_blow_fan_configured(pmodel));
+    view_common_set_hidden(pdata->btn_bracciolo, !pmodel->configuration.heated_arm_enabled);
+    view_common_set_hidden(pdata->btn_steam_gun, !pmodel->configuration.steam_gun_enabled);
+    view_common_set_hidden(pdata->btn_boiler, !pmodel->configuration.boiler_enabled);
+
     if (model_get_soffio_on(pmodel)) {
         lv_anim_set_time(&pdata->anim_ventola_soffio, speed_to_period_transform[model_get_velocita_soffio(pmodel)]);
         lv_anim_set_time(&pdata->anim_ventola_soffio_popup,
@@ -671,9 +757,9 @@ static void update_page(model_t *pmodel, struct page_data *pdata, uint8_t restar
         pdata->aspirazione_on = 0;
     }
 
-    view_common_set_checked(pdata->btn_luce, model_get_luce(pmodel));
+    view_common_set_checked(pdata->btn_luce, model_get_light(pmodel));
     view_common_img_set_src(lv_obj_get_child(pdata->btn_luce, 0),
-                            model_get_luce(pmodel) ? &img_luce_on : &img_luce_off);
+                            model_get_light(pmodel) ? &img_luce_on : &img_luce_off);
 
     view_common_set_checked(pdata->btn_tavolo, model_get_richiesta_temperatura_tavolo(pmodel));
     view_common_set_hidden(pdata->img_calore_tavolo, !model_get_tavolo_on(pmodel));
@@ -690,9 +776,9 @@ static void update_page(model_t *pmodel, struct page_data *pdata, uint8_t restar
                             model_get_richiesta_temperatura_bracciolo(pmodel) ? &img_bracciolo_on : &img_bracciolo_off);
 
     view_common_set_checked(pdata->btn_ferro_1, model_get_ferro_1(pmodel));
-    view_common_set_checked(pdata->btn_ferro_2, model_get_ferro_2(pmodel));
+    view_common_set_checked(pdata->btn_ferro_2, model_get_second_iron(pmodel));
     view_common_img_set_src(pdata->img_ferro_1, model_get_ferro_1(pmodel) ? &img_ferro_1_on : &img_ferro_1_off);
-    view_common_img_set_src(pdata->img_ferro_2, model_get_ferro_2(pmodel) ? &img_ferro_2_on : &img_ferro_2_off);
+    view_common_img_set_src(pdata->img_ferro_2, model_get_second_iron(pmodel) ? &img_ferro_2_on : &img_ferro_2_off);
 
     view_common_set_checked(pdata->btn_boiler, model_get_richiesta_boiler(pmodel));
     if (model_boiler_pieno(pmodel)) {
@@ -711,19 +797,9 @@ static void update_page(model_t *pmodel, struct page_data *pdata, uint8_t restar
                 start_background_animations(pdata);
             }
 
-            view_common_img_set_src(lv_obj_get_child(pdata->btn_fotocellula, 0),
+            view_common_img_set_src(lv_obj_get_child(pdata->btn_steam_gun, 0),
                                     model_get_gun_state(pmodel) ? &img_steam_brush_on : &img_steam_brush_off);
-            view_common_set_checked(pdata->btn_fotocellula, model_get_gun_state(pmodel));
-#if 0
-            switch (model_get_fotocellula(pmodel)) {
-                case FOTOCELLULA_SX:
-                    view_common_img_set_src(lv_obj_get_child(pdata->btn_fotocellula, 0), &img_fotocellula_sx);
-                    break;
-                case FOTOCELLULA_DX:
-                    view_common_img_set_src(lv_obj_get_child(pdata->btn_fotocellula, 0), &img_fotocellula_dx);
-                    break;
-    }
-#endif
+            view_common_set_checked(pdata->btn_steam_gun, model_get_gun_state(pmodel));
             break;
 
         case EDITING_TARGET_TEMPERATURA_BRACCIOLO:
@@ -795,21 +871,9 @@ static void pause_background_animations(struct page_data *pdata) {
 static void start_background_animations(struct page_data *pdata) {}
 
 
-static lv_obj_t *base_button(lv_obj_t *root, size_t col, size_t row, int id) {
-    lv_obj_t *btn = lv_btn_create(root);
-    lv_obj_set_size(btn, COL_SIZE - 4, ROW_SIZE - 4);
-    lv_obj_set_grid_cell(btn, LV_GRID_ALIGN_CENTER, col, 1, LV_GRID_ALIGN_CENTER, row, 1);
-    lv_obj_add_style(btn, (lv_style_t *)&style_black_border, LV_STATE_DEFAULT);
-    lv_obj_add_style(btn, (lv_style_t *)&style_btn_checked, LV_STATE_CHECKED);
-    view_register_object_default_callback(btn, id);
-
-    return btn;
-}
-
-
 static lv_obj_t *heat_image_button(lv_obj_t *root, const lv_img_dsc_t *img_dsc, uint32_t h_shift, size_t col,
                                    size_t row, int id) {
-    lv_obj_t *btn = base_button(root, col, row, id);
+    lv_obj_t *btn = view_common_base_button_create(root, id);
 
     lv_obj_t *img = lv_img_create(btn);
     lv_img_set_src(img, img_dsc);
@@ -833,7 +897,7 @@ static lv_obj_t *heat_image_button(lv_obj_t *root, const lv_img_dsc_t *img_dsc, 
 
 
 static lv_obj_t *iron_image_button(lv_obj_t *root, const lv_img_dsc_t *img_dsc, size_t col, size_t row, int id) {
-    lv_obj_t *btn = base_button(root, col, row, id);
+    lv_obj_t *btn = view_common_base_button_create(root, id);
 
     lv_obj_t *img = lv_img_create(btn);
     lv_img_set_src(img, img_dsc);
@@ -856,17 +920,6 @@ static lv_obj_t *iron_image_button(lv_obj_t *root, const lv_img_dsc_t *img_dsc, 
     return btn;
 }
 
-
-
-static lv_obj_t *image_button(lv_obj_t *root, const lv_img_dsc_t *img_dsc, size_t col, size_t row, int id) {
-    lv_obj_t *btn = base_button(root, col, row, id);
-
-    lv_obj_t *img = lv_img_create(btn);
-    lv_img_set_src(img, img_dsc);
-    lv_obj_center(img);
-
-    return btn;
-}
 
 
 static lv_obj_t *popup_temperature_create(lv_obj_t *root, lv_obj_t **arc, lv_obj_t **lbl, lv_obj_t **img,
@@ -1061,13 +1114,15 @@ static lv_obj_t *popup_alarm_create(lv_obj_t *root, lv_obj_t **lbl, int dismiss_
     lv_obj_center(cont);
 
     *lbl = lv_label_create(cont);
-    lv_obj_align(*lbl, LV_ALIGN_CENTER, 0, -16);
+    lv_obj_align(*lbl, LV_ALIGN_CENTER, 0, 0);
     lv_label_set_long_mode(*lbl, LV_LABEL_LONG_WRAP);
+    lv_obj_set_style_text_font(*lbl, &lv_font_montserrat_20, LV_LABEL_LONG_WRAP);
+    lv_obj_set_style_text_align(*lbl, LV_TEXT_ALIGN_CENTER, LV_LABEL_LONG_WRAP);
     lv_obj_set_width(*lbl, 200);
 
     lv_obj_t *img = lv_img_create(cont);
     lv_img_set_src(img, &img_warning_lg);
-    lv_obj_align(img, LV_ALIGN_CENTER, 0, 48);
+    lv_obj_align(img, LV_ALIGN_TOP_MID, 0, 4);
 
     lv_obj_t *btn = lv_btn_create(cont);
     lv_obj_add_style(btn, (lv_style_t *)&style_config_btn, LV_STATE_DEFAULT);
@@ -1076,7 +1131,7 @@ static lv_obj_t *popup_alarm_create(lv_obj_t *root, lv_obj_t **lbl, int dismiss_
     lv_obj_set_style_text_font(btn_lbl, STYLE_FONT_BIG, LV_STATE_DEFAULT);
     lv_label_set_text(btn_lbl, LV_SYMBOL_CLOSE);
     lv_obj_center(btn_lbl);
-    lv_obj_align(btn, LV_ALIGN_TOP_RIGHT, 0, 0);
+    lv_obj_align(btn, LV_ALIGN_BOTTOM_MID, 0, 0);
     view_register_object_default_callback(btn, dismiss_id);
 
     return cont;
@@ -1151,6 +1206,36 @@ static lv_anim_t fan_animation(lv_obj_t *img, uint32_t period) {
      *------------------*/
     return a;
 }
+
+
+static void drag_event_handler(lv_event_t *e) {
+    lv_obj_t         *obj   = lv_event_get_current_target(e);
+    struct page_data *pdata = lv_event_get_user_data(e);
+    if (lv_event_get_target(e) == pdata->btn_menu) {
+        pdata->ignore_click = 1;
+    }
+
+    lv_indev_t *indev = lv_indev_get_act();
+    if (indev == NULL) {
+        return;
+    }
+
+    lv_point_t vect;
+    // lv_indev_get_vect(indev, &vect);
+    lv_indev_get_point(indev, &vect);
+
+    lv_coord_t x = vect.x;
+
+    if (x >= LV_HOR_RES - COL_SIZE && x <= LV_HOR_RES) {
+        lv_obj_align(obj, LV_ALIGN_RIGHT_MID, -LV_HOR_RES + x + COL_SIZE + 16, 0);
+    } else {
+        lv_obj_align(obj, LV_ALIGN_RIGHT_MID, 8, 0);
+    }
+}
+
+
+static void snap_event_handler(lv_event_t *e) {}
+
 
 
 const pman_page_t page_main = {

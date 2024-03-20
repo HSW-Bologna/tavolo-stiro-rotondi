@@ -7,6 +7,17 @@
 #include "gel/pagemanager/page_manager.h"
 
 
+typedef struct {
+    const char *name;
+    void (*update)(model_t *pmodel, int value);
+    void (*to_string)(char *string, size_t len, int value);
+    int min;
+    int max;
+    int step;
+    int initial_value;
+} number_parameter_metadata_t;
+
+
 void view_init(model_t *pmodel,
                void (*flush_cb)(struct _lv_disp_drv_t *disp_drv, const lv_area_t *area, lv_color_t *color_p),
                void (*read_cb)(struct _lv_indev_drv_t *indev_drv, lv_indev_data_t *data));
@@ -31,7 +42,7 @@ void        view_event(view_event_t event);
 
 
 extern const pman_page_t page_main, page_test_output, page_test_input, page_password, page_test_analogs,
-    page_parameters, page_test_fans, page_menu;
+    page_parameters, page_test_fans, page_menu, page_number_parameter, page_machine_model, page_standby;
 
 
 #endif

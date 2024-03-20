@@ -39,9 +39,9 @@ static void *create_page(model_t *pmodel, void *extra) {
 
 static void open_page(model_t *pmodel, void *args) {
     struct page_data *pdata = args;
-    lv_obj_t         *cont, *slider, *lbl;
+    lv_obj_t         *slider, *lbl;
 
-    cont = view_common_create_title(lv_scr_act(), "Collaudo ventole", BACK_BTN_ID, PREV_BTN_ID, NEXT_BTN_ID);
+    view_common_create_title(lv_scr_act(), "Collaudo ventole", BACK_BTN_ID, PREV_BTN_ID, NEXT_BTN_ID);
 
     slider = lv_slider_create(lv_scr_act());
     lv_slider_set_range(slider, 0, 100);
@@ -75,7 +75,7 @@ static view_message_t page_event(model_t *pmodel, void *args, view_event_t event
 
     switch (event.code) {
         case VIEW_EVENT_CODE_OPEN:
-            model_set_test(pmodel, 1);
+            model_set_machine_test(pmodel);
             break;
 
         case VIEW_EVENT_CODE_LVGL: {
@@ -99,7 +99,7 @@ static view_message_t page_event(model_t *pmodel, void *args, view_event_t event
                         case BACK_BTN_ID:
                             model_set_test_percentage_suction(pmodel, 0);
                             model_set_test_percentage_blow(pmodel, 0);
-                            model_set_test(pmodel, 0);
+                            model_set_machine_on(pmodel);
                             msg.vmsg.code = VIEW_PAGE_MESSAGE_CODE_BACK;
                             break;
                     }

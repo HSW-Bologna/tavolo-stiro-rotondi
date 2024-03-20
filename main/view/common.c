@@ -8,6 +8,28 @@
 LV_IMG_DECLARE(img_door);
 
 
+lv_obj_t *view_common_base_button_create(lv_obj_t *root, int id) {
+    lv_obj_t *btn = lv_btn_create(root);
+    lv_obj_set_size(btn, COL_SIZE - 4, ROW_SIZE - 4);
+    lv_obj_add_style(btn, (lv_style_t *)&style_black_border, LV_STATE_DEFAULT);
+    lv_obj_add_style(btn, (lv_style_t *)&style_btn_checked, LV_STATE_CHECKED);
+    view_register_object_default_callback(btn, id);
+
+    return btn;
+}
+
+
+lv_obj_t *view_common_image_button_create(lv_obj_t *root, const lv_img_dsc_t *img_dsc, int id) {
+    lv_obj_t *btn = view_common_base_button_create(root, id);
+
+    lv_obj_t *img = lv_img_create(btn);
+    lv_img_set_src(img, img_dsc);
+    lv_obj_center(img);
+
+    return btn;
+}
+
+
 view_common_led_button_t view_common_create_led_button(lv_obj_t *root, const char *text, int id, int number) {
     lv_obj_t                *btn, *lbl, *led;
     view_common_led_button_t led_button = {0};
@@ -91,6 +113,7 @@ lv_obj_t *view_common_create_title(lv_obj_t *root, const char *text, int back_id
     lbl = lv_label_create(cont);
     lv_label_set_long_mode(lbl, LV_LABEL_LONG_WRAP);
     lv_obj_set_style_text_align(lbl, LV_TEXT_ALIGN_CENTER, LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(lbl, STYLE_FONT_MEDIUM, LV_STATE_DEFAULT);
     lv_obj_set_width(lbl, LV_HOR_RES - 128);
     lv_label_set_text(lbl, text);
     lv_obj_align(lbl, LV_ALIGN_CENTER, 0, 0);

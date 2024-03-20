@@ -105,7 +105,7 @@ static view_message_t page_event(model_t *pmodel, void *args, view_event_t event
 
     switch (event.code) {
         case VIEW_EVENT_CODE_OPEN:
-            model_set_test(pmodel, 1);
+            model_set_machine_test(pmodel);
             break;
 
         case VIEW_EVENT_CODE_LVGL: {
@@ -138,7 +138,7 @@ static view_message_t page_event(model_t *pmodel, void *args, view_event_t event
                             break;
 
                         case BACK_BTN_ID:
-                            model_set_test(pmodel, 0);
+                            model_set_machine_on(pmodel);
                             msg.vmsg.code = VIEW_PAGE_MESSAGE_CODE_BACK;
                             break;
                     }

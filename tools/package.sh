@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 
-DIR=tavolo_stiro_master_rotondi_v$1_$2_$3
+DIR=tavolo-stiro-master-rotondi_$1_$2_$3
 mkdir /tmp/$DIR
 cp ./build/bootloader/bootloader.bin /tmp/$DIR
 cp ./build/partition_table/partition-table.bin /tmp/$DIR

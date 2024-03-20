@@ -77,7 +77,7 @@ void view_init(model_t *pmodel,
 
 
 void view_wait_release(void) {
-    //lv_indev_wait_release(touch_indev);
+    // lv_indev_wait_release(touch_indev);
 }
 
 

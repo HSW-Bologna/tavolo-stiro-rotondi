@@ -3,7 +3,6 @@
 
 # TODO
 
- - ~La caldaia va controllata fissa~
- - ~Usare un motore solo (aspirazione per la velocita', soffio per cambiare la tagliola)~
- - ~Aggiungere funzione scambio bracciolo: quando sento un certo ingresso attivare uscita recuperatore~
- - ~Aggiungere uscita pistola~
+ - Dove va il tasto di spegnimento?
+ - Che dispositivo uso come minion?
+ - Il ferro 2 non serve mai?

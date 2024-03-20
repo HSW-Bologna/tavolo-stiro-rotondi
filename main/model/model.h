@@ -43,6 +43,14 @@
 #define NUM_SPEED_STEPS 8
 #define DIGOUT_GUN      DIGOUT_POMPA
 
+
+typedef enum {
+    FAN_CONFIG_SWITCH,
+    FAN_CONFIG_BOTH,
+    FAN_CONFIG_SUCTION_ONLY,
+} fan_config_t;
+
+
 typedef enum {
     DIGOUT_POMPA = 0,
     DIGOUT_RISCALDAMENTO_VAPORE,
@@ -89,10 +97,33 @@ typedef enum {
 } ptc_t;
 
 
+typedef enum {
+    MACHINE_MODEL_388_398_399 = 0,
+    MACHINE_MODEL_400,
+    MACHINE_MODEL_2000,
+    MACHINE_MODEL_2500,
+    MACHINE_MODEL_3000,
+    MACHINE_MODEL_3300,
+    MACHINE_MODEL_NONE = 0xFF,
+#define NUM_MACHINE_MODELS 6
+} machine_model_t;
+
+
+typedef enum {
+    MACHINE_STATE_ON = 0,
+    MACHINE_STATE_TEST,
+    MACHINE_STATE_STANDBY,
+} machine_state_t;
+
 
 typedef struct {
     struct {
-        uint8_t  fotocellula;
+        uint8_t  machine_model;
+        uint8_t  second_iron_enabled;
+        uint8_t  heated_arm_enabled;
+        uint8_t  steam_gun_enabled;
+        uint8_t  light_enabled;
+        uint8_t  boiler_enabled;
         uint16_t language;
         uint16_t setpoint_temperatura_tavolo;
         uint16_t setpoint_temperatura_bracciolo;
@@ -107,11 +138,13 @@ typedef struct {
         uint16_t isteresi_caldaia;
         uint8_t  numero_sonde;
         uint16_t boiler_adc_threshold;
+        uint8_t  fan_config;
     } configuration;
 
     struct {
+        machine_state_t machine_state;
+
         uint8_t luce;
-        uint8_t test;
         uint8_t ferro_1;
         uint8_t ferro_2;
         uint8_t soffio_on;
@@ -163,14 +196,19 @@ int16_t  model_get_ptc_temperature(model_t *pmodel, ptc_t ptc);
 int16_t  model_get_temperatura_tavolo(model_t *pmodel);
 int16_t  model_get_temperatura_bracciolo(model_t *pmodel);
 uint16_t model_get_adc_ptc(model_t *pmodel, ptc_t ptc);
-
-GETTERNSETTER(test, run.test);
+uint8_t  model_get_light(model_t *pmodel);
+uint8_t  model_get_second_iron(model_t *pmodel);
+uint8_t  model_is_blow_fan_configured(model_t *pmodel);
+uint8_t  model_get_steam_gun(model_t *pmodel);
+void     model_set_machine_model(model_t *pmodel, machine_model_t machine_model);
+uint8_t  model_is_in_test(model_t *pmodel);
+uint8_t  model_is_in_standby(model_t *pmodel);
+void     model_set_machine_standby(model_t *pmodel);
+void     model_set_machine_on(model_t *pmodel);
+void     model_set_machine_test(model_t *pmodel);
 
 GETTER(minion_relays, minion.relays);
-GETTER(luce, run.luce);
 GETTER(ferro_1, run.ferro_1);
-GETTER(ferro_2, run.ferro_2);
-GETTER(fotocellula, configuration.fotocellula);
 
 GETTER(max_temperatura_tavolo, configuration.max_temperatura_tavolo);
 GETTER(max_temperatura_bracciolo, configuration.max_temperatura_bracciolo);
@@ -202,7 +240,6 @@ TOGGLER(luce, run.luce);
 TOGGLER(gun, run.gun_state);
 TOGGLER(ferro_1, run.ferro_1);
 TOGGLER(ferro_2, run.ferro_2);
-TOGGLER(fotocellula, configuration.fotocellula);
 TOGGLER(richiesta_temperatura_tavolo, run.richiesta_temperatura_tavolo);
 TOGGLER(richiesta_temperatura_bracciolo, run.richiesta_temperatura_bracciolo);
 TOGGLER(richiesta_boiler, run.richiesta_boiler);

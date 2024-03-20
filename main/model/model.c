@@ -16,10 +16,10 @@ void model_init(model_t *pmodel) {
     assert(pmodel != NULL);
     (void)TAG;
 
+    pmodel->run.machine_state                   = MACHINE_STATE_ON;
     pmodel->configuration.language              = 0;
     pmodel->run.luce                            = 0;
     pmodel->run.gun_state                       = 0;
-    pmodel->run.test                            = 0;
     pmodel->run.ferro_1                         = 0;
     pmodel->run.ferro_2                         = 0;
     pmodel->run.soffio_on                       = 0;
@@ -35,6 +35,12 @@ void model_init(model_t *pmodel) {
     pmodel->run.test_percentage_blow            = 0;
     pmodel->run.alarm_communication             = 0;
 
+    pmodel->configuration.machine_model                  = MACHINE_MODEL_NONE;
+    pmodel->configuration.second_iron_enabled            = 0;
+    pmodel->configuration.steam_gun_enabled              = 0;
+    pmodel->configuration.heated_arm_enabled             = 0;
+    pmodel->configuration.light_enabled                  = 0;
+    pmodel->configuration.boiler_enabled                 = 0;
     pmodel->configuration.max_temperatura_tavolo         = APP_CONFIG_DEFAULT_LIMITE_TEMPERATURA;
     pmodel->configuration.max_temperatura_bracciolo      = APP_CONFIG_DEFAULT_LIMITE_TEMPERATURA;
     pmodel->configuration.setpoint_temperatura_tavolo    = 50;
@@ -46,8 +52,7 @@ void model_init(model_t *pmodel) {
     pmodel->configuration.numero_sonde                   = 1;
     pmodel->configuration.boiler_adc_threshold           = 2000;
     pmodel->configuration.isteresi_caldaia               = 15;
-
-    pmodel->configuration.fotocellula = FOTOCELLULA_SX;
+    pmodel->configuration.fan_config                     = FAN_CONFIG_SWITCH;
 
     pmodel->configuration.percentuali_soffio[0] = 40;
     pmodel->configuration.percentuali_soffio[1] = 45;
@@ -78,6 +83,78 @@ void model_init(model_t *pmodel) {
 }
 
 
+void model_set_machine_model(model_t *pmodel, machine_model_t machine_model) {
+    assert(pmodel != NULL);
+
+    pmodel->configuration.machine_model = machine_model;
+
+    switch (machine_model) {
+        case MACHINE_MODEL_NONE:
+            pmodel->configuration.fan_config          = FAN_CONFIG_SUCTION_ONLY;
+            pmodel->configuration.second_iron_enabled = 0;
+            pmodel->configuration.heated_arm_enabled  = 0;
+            pmodel->configuration.light_enabled       = 0;
+            pmodel->configuration.boiler_enabled      = 0;
+            pmodel->configuration.steam_gun_enabled   = 0;
+            break;
+
+        case MACHINE_MODEL_388_398_399:
+            pmodel->configuration.fan_config          = FAN_CONFIG_SUCTION_ONLY;
+            pmodel->configuration.second_iron_enabled = 0;
+            pmodel->configuration.heated_arm_enabled  = 0;
+            pmodel->configuration.light_enabled       = 0;
+            pmodel->configuration.boiler_enabled      = 0;
+            pmodel->configuration.steam_gun_enabled   = 0;
+            break;
+
+        case MACHINE_MODEL_400:
+            pmodel->configuration.fan_config          = FAN_CONFIG_BOTH;
+            pmodel->configuration.second_iron_enabled = 0;
+            pmodel->configuration.heated_arm_enabled  = 0;
+            pmodel->configuration.light_enabled       = 0;
+            pmodel->configuration.boiler_enabled      = 0;
+            pmodel->configuration.steam_gun_enabled   = 0;
+            break;
+
+        case MACHINE_MODEL_2000:
+            pmodel->configuration.fan_config          = FAN_CONFIG_SWITCH;
+            pmodel->configuration.second_iron_enabled = 0;
+            pmodel->configuration.heated_arm_enabled  = 1;
+            pmodel->configuration.light_enabled       = 0;
+            pmodel->configuration.boiler_enabled      = 0;
+            pmodel->configuration.steam_gun_enabled   = 0;
+            break;
+
+        case MACHINE_MODEL_2500:
+            pmodel->configuration.fan_config          = FAN_CONFIG_SUCTION_ONLY;
+            pmodel->configuration.second_iron_enabled = 0;
+            pmodel->configuration.heated_arm_enabled  = 0;
+            pmodel->configuration.light_enabled       = 0;
+            pmodel->configuration.boiler_enabled      = 0;
+            pmodel->configuration.steam_gun_enabled   = 0;
+            break;
+
+        case MACHINE_MODEL_3000:
+            pmodel->configuration.fan_config          = FAN_CONFIG_SUCTION_ONLY;
+            pmodel->configuration.second_iron_enabled = 0;
+            pmodel->configuration.heated_arm_enabled  = 0;
+            pmodel->configuration.light_enabled       = 0;
+            pmodel->configuration.boiler_enabled      = 1;
+            pmodel->configuration.steam_gun_enabled   = 0;
+            break;
+
+        case MACHINE_MODEL_3300:
+            pmodel->configuration.fan_config          = FAN_CONFIG_SWITCH;
+            pmodel->configuration.second_iron_enabled = 0;
+            pmodel->configuration.heated_arm_enabled  = 0;
+            pmodel->configuration.light_enabled       = 0;
+            pmodel->configuration.boiler_enabled      = 1;
+            pmodel->configuration.steam_gun_enabled   = 0;
+            break;
+    }
+}
+
+
 void model_toggle_soffio(model_t *pmodel) {
     assert(pmodel != NULL);
     pmodel->run.soffio_on      = !pmodel->run.soffio_on;
@@ -92,9 +169,63 @@ void model_toggle_aspirazione(model_t *pmodel) {
 }
 
 
+uint8_t model_get_light(model_t *pmodel) {
+    assert(pmodel != NULL);
+    return pmodel->configuration.light_enabled && pmodel->run.luce;
+}
+
+
+uint8_t model_get_second_iron(model_t *pmodel) {
+    assert(pmodel != NULL);
+    return pmodel->configuration.second_iron_enabled && pmodel->run.ferro_2;
+}
+
+
+uint8_t model_get_steam_gun(model_t *pmodel) {
+    assert(pmodel != NULL);
+    return pmodel->configuration.steam_gun_enabled && pmodel->run.gun_state;
+}
+
+
+uint8_t model_is_blow_fan_configured(model_t *pmodel) {
+    assert(pmodel != NULL);
+    return pmodel->configuration.fan_config != FAN_CONFIG_SUCTION_ONLY;
+}
+
+
+uint8_t model_is_in_test(model_t *pmodel) {
+    assert(pmodel != NULL);
+    return pmodel->run.machine_state == MACHINE_STATE_TEST;
+}
+
+
+uint8_t model_is_in_standby(model_t *pmodel) {
+    assert(pmodel != NULL);
+    return pmodel->run.machine_state == MACHINE_STATE_STANDBY;
+}
+
+
+void model_set_machine_test(model_t *pmodel) {
+    assert(pmodel != NULL);
+    pmodel->run.machine_state = MACHINE_STATE_TEST;
+}
+
+
+void model_set_machine_on(model_t *pmodel) {
+    assert(pmodel != NULL);
+    pmodel->run.machine_state = MACHINE_STATE_ON;
+}
+
+
+void model_set_machine_standby(model_t *pmodel) {
+    assert(pmodel != NULL);
+    pmodel->run.machine_state = MACHINE_STATE_STANDBY;
+}
+
+
 uint8_t model_get_percentuale_soffio(model_t *pmodel) {
     assert(pmodel != NULL);
-    if (model_get_test(pmodel)) {
+    if (model_is_in_test(pmodel)) {
         return model_get_test_percentage_blow(pmodel);
     } else if (model_get_soffio_on(pmodel)) {
         return pmodel->configuration.percentuali_soffio[model_get_velocita_soffio(pmodel)];
@@ -106,7 +237,7 @@ uint8_t model_get_percentuale_soffio(model_t *pmodel) {
 
 uint8_t model_get_percentuale_aspirazione(model_t *pmodel) {
     assert(pmodel != NULL);
-    if (model_get_test(pmodel)) {
+    if (model_is_in_test(pmodel)) {
         return model_get_test_percentage_suction(pmodel);
     } else if (model_get_aspirazione_on(pmodel)) {
         return pmodel->configuration.percentuali_aspirazione[model_get_velocita_aspirazione(pmodel)];
@@ -146,7 +277,7 @@ uint8_t model_should_deactivate_table(model_t *pmodel) {
 
 uint8_t model_should_activate_arm(model_t *pmodel) {
     assert(pmodel != NULL);
-    return model_get_richiesta_temperatura_bracciolo(pmodel);
+    return pmodel->configuration.heated_arm_enabled && model_get_richiesta_temperatura_bracciolo(pmodel);
     // FIXME: pezze fiera
     if (model_get_richiesta_temperatura_bracciolo(pmodel)) {
         return (model_get_temperatura_bracciolo(pmodel) + model_get_isteresi_bracciolo(pmodel) <
@@ -159,7 +290,7 @@ uint8_t model_should_activate_arm(model_t *pmodel) {
 
 uint8_t model_should_deactivate_arm(model_t *pmodel) {
     assert(pmodel != NULL);
-    return !model_get_richiesta_temperatura_bracciolo(pmodel);
+    return pmodel->configuration.heated_arm_enabled || !model_get_richiesta_temperatura_bracciolo(pmodel);
     // FIXME: pezze fiera
     if (model_get_richiesta_temperatura_bracciolo(pmodel)) {
         return (model_get_temperatura_bracciolo(pmodel) >

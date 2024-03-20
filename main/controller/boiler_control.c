@@ -122,8 +122,14 @@ static int filling_event_manager(model_t *pmodel, boiler_control_event_t event) 
             break;
 
         case BOILER_CONTROL_EVENT_REFRESH:
-            boiler_update(pmodel, 1);
-            pump_update(pmodel, 1);
+            if (!pmodel->configuration.boiler_enabled) {
+                pump_update(pmodel, 0);
+                boiler_update(pmodel, 0);
+                return BOILER_SM_STATE_OFF;
+            } else {
+                boiler_update(pmodel, 1);
+                pump_update(pmodel, 1);
+            }
             break;
 
         case BOILER_CONTROL_EVENT_TOGGLE:
@@ -152,8 +158,14 @@ static int filling_heating_event_manager(model_t *pmodel, boiler_control_event_t
             break;
 
         case BOILER_CONTROL_EVENT_REFRESH:
-            boiler_update(pmodel, 1);
-            pump_update(pmodel, 1);
+            if (!pmodel->configuration.boiler_enabled) {
+                pump_update(pmodel, 0);
+                boiler_update(pmodel, 0);
+                return BOILER_SM_STATE_OFF;
+            } else {
+                boiler_update(pmodel, 1);
+                pump_update(pmodel, 1);
+            }
             break;
 
         case BOILER_CONTROL_EVENT_TOGGLE:
@@ -183,8 +195,14 @@ static int heating_event_manager(model_t *pmodel, boiler_control_event_t event) 
             break;
 
         case BOILER_CONTROL_EVENT_REFRESH:
-            boiler_update(pmodel, 1);
-            pump_update(pmodel, 0);
+            if (!pmodel->configuration.boiler_enabled) {
+                pump_update(pmodel, 0);
+                boiler_update(pmodel, 0);
+                return BOILER_SM_STATE_OFF;
+            } else {
+                boiler_update(pmodel, 1);
+                pump_update(pmodel, 0);
+            }
             break;
 
         case BOILER_CONTROL_EVENT_TOGGLE:
@@ -214,8 +232,14 @@ static int hysteresis_event_manager(model_t *pmodel, boiler_control_event_t even
             break;
 
         case BOILER_CONTROL_EVENT_REFRESH:
-            boiler_update(pmodel, 1);
-            pump_update(pmodel, 0);
+            if (!pmodel->configuration.boiler_enabled) {
+                pump_update(pmodel, 0);
+                boiler_update(pmodel, 0);
+                return BOILER_SM_STATE_OFF;
+            } else {
+                boiler_update(pmodel, 1);
+                pump_update(pmodel, 0);
+            }
             break;
 
         case BOILER_CONTROL_EVENT_TOGGLE:
@@ -239,7 +263,7 @@ static void boiler_update(model_t *pmodel, uint8_t on) {
     if (model_set_boiler_on(pmodel, on)) {
         view_event((view_event_t){.code = VIEW_EVENT_CODE_UPDATE});
     }
-    if (!model_get_test(pmodel)) {
+    if (!model_is_in_test(pmodel)) {
         model_set_relay(pmodel, DIGOUT_RISCALDAMENTO_VAPORE, on);
     }
 }
@@ -249,7 +273,7 @@ static void pump_update(model_t *pmodel, uint8_t on) {
     if (model_set_pompa_on(pmodel, on)) {
         view_event((view_event_t){.code = VIEW_EVENT_CODE_UPDATE});
     }
-    if (!model_get_test(pmodel)) {
+    if (!model_is_in_test(pmodel)) {
         model_set_relay(pmodel, DIGOUT_POMPA, on);
     }
 }

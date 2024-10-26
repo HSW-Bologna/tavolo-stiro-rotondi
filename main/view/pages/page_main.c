@@ -127,6 +127,7 @@ struct page_data {
     lv_obj_t *popup_tavolo;
     lv_obj_t *arc_setpoint_tavolo;
     lv_obj_t *lbl_setpoint_tavolo;
+    lv_obj_t *lbl_setpoint_tavolo_main;
 
     lv_obj_t *popup_bracciolo;
     lv_obj_t *arc_setpoint_bracciolo;
@@ -227,28 +228,25 @@ static void open_page(model_t *pmodel, void *args) {
     lv_obj_set_style_pad_right(cont, 6, LV_STATE_DEFAULT);
 
     // Bottone Tavolo
-    pdata->btn_tavolo        = heat_image_button(cont, &img_tavolo_off, 24, 0, 0, TAVOLO_BTN_ID);
-    pdata->img_tavolo        = lv_obj_get_child(pdata->btn_tavolo, 0);
-    pdata->img_calore_tavolo = lv_obj_get_child(pdata->btn_tavolo, 1);
+    pdata->btn_tavolo               = heat_image_button(cont, &img_tavolo_off, 24, 0, 0, TAVOLO_BTN_ID);
+    pdata->img_tavolo               = lv_obj_get_child(pdata->btn_tavolo, 0);
+    pdata->img_calore_tavolo        = lv_obj_get_child(pdata->btn_tavolo, 1);
+    pdata->lbl_setpoint_tavolo_main = lv_label_create(pdata->btn_tavolo);
+    lv_obj_set_style_text_font(pdata->lbl_setpoint_tavolo_main, STYLE_FONT_MEDIUM, LV_STATE_DEFAULT);
+    lv_obj_align(pdata->lbl_setpoint_tavolo_main, LV_ALIGN_CENTER, 0, -28);
     lv_obj_add_flag(pdata->btn_tavolo, LV_OBJ_FLAG_CHECKABLE);
+    lv_obj_set_width(pdata->btn_tavolo, 180);
+    lv_img_set_zoom(pdata->img_tavolo, 320);
+    lv_img_set_zoom(pdata->img_calore_tavolo, 320);
 
     // Bottone Bracciolo
-    pdata->btn_bracciolo        = heat_image_button(cont, &img_bracciolo_off, 32, 0, 1, BRACCIOLO_BTN_ID);
+    pdata->btn_bracciolo        = heat_image_button(cont, &img_bracciolo_off, 36, 0, 1, BRACCIOLO_BTN_ID);
     pdata->img_bracciolo        = lv_obj_get_child(pdata->btn_bracciolo, 0);
     pdata->img_calore_bracciolo = lv_obj_get_child(pdata->btn_bracciolo, 1);
     lv_obj_add_flag(pdata->btn_bracciolo, LV_OBJ_FLAG_CHECKABLE);
-
-    // Bottone Ferro 1
-    pdata->btn_ferro_1        = iron_image_button(cont, &img_ferro_1_off, 1, 0, FERRO_1_BTN_ID);
-    pdata->img_ferro_1        = lv_obj_get_child(pdata->btn_ferro_1, 0);
-    pdata->img_vapore_ferro_1 = lv_obj_get_child(pdata->btn_ferro_1, 1);
-    lv_obj_add_flag(pdata->btn_ferro_1, LV_OBJ_FLAG_CHECKABLE);
-
-    // Bottone Ferro 2
-    pdata->btn_ferro_2        = iron_image_button(cont, &img_ferro_2_off, 1, 1, FERRO_2_BTN_ID);
-    pdata->img_ferro_2        = lv_obj_get_child(pdata->btn_ferro_2, 0);
-    pdata->img_vapore_ferro_2 = lv_obj_get_child(pdata->btn_ferro_2, 1);
-    lv_obj_add_flag(pdata->btn_ferro_2, LV_OBJ_FLAG_CHECKABLE);
+    lv_obj_set_width(pdata->btn_bracciolo, 180);
+    lv_img_set_zoom(pdata->img_bracciolo, 320);
+    lv_img_set_zoom(pdata->img_calore_bracciolo, 320);
 
     // Bottone Aspirazione
     btn = view_common_base_button_create(cont, SUCTION_BTN_ID);
@@ -263,15 +261,28 @@ static void open_page(model_t *pmodel, void *args) {
     pdata->btn_aspirazione      = btn;
     lv_obj_add_flag(pdata->btn_aspirazione, LV_OBJ_FLAG_CHECKABLE);
 
+    // Bottone Ferro 1
+    pdata->btn_ferro_1        = iron_image_button(cont, &img_ferro_1_off, 1, 0, FERRO_1_BTN_ID);
+    pdata->img_ferro_1        = lv_obj_get_child(pdata->btn_ferro_1, 0);
+    pdata->img_vapore_ferro_1 = lv_obj_get_child(pdata->btn_ferro_1, 1);
+    lv_obj_add_flag(pdata->btn_ferro_1, LV_OBJ_FLAG_CHECKABLE);
+
+    // Bottone Ferro 2
+    pdata->btn_ferro_2        = iron_image_button(cont, &img_ferro_2_off, 1, 1, FERRO_2_BTN_ID);
+    pdata->img_ferro_2        = lv_obj_get_child(pdata->btn_ferro_2, 0);
+    pdata->img_vapore_ferro_2 = lv_obj_get_child(pdata->btn_ferro_2, 1);
+    lv_obj_add_flag(pdata->btn_ferro_2, LV_OBJ_FLAG_CHECKABLE);
+
     // Bottone Soffio
     btn = view_common_base_button_create(cont, SOFFIO_BTN_ID);
     img = lv_img_create(btn);
     lv_img_set_src(img, &img_ventola);
-    lv_obj_align(img, LV_ALIGN_TOP_MID, 0, 0);
+    lv_obj_align(img, LV_ALIGN_BOTTOM_MID, 0, 0);
     pdata->img_ventola_soffio = img;
     img                       = lv_img_create(btn);
     lv_img_set_src(img, &img_aria);
-    lv_obj_align(img, LV_ALIGN_BOTTOM_MID, 0, 0);
+    lv_obj_align(img, LV_ALIGN_TOP_MID, 0, 0);
+    lv_img_set_angle(img, 1800);
     pdata->img_aria_soffio = img;
     pdata->btn_soffio      = btn;
     lv_obj_add_flag(pdata->btn_soffio, LV_OBJ_FLAG_CHECKABLE);
@@ -800,6 +811,9 @@ static void update_page(model_t *pmodel, struct page_data *pdata, uint8_t restar
             view_common_img_set_src(lv_obj_get_child(pdata->btn_steam_gun, 0),
                                     model_get_gun_state(pmodel) ? &img_steam_brush_on : &img_steam_brush_off);
             view_common_set_checked(pdata->btn_steam_gun, model_get_gun_state(pmodel));
+
+            lv_label_set_text_fmt(pdata->lbl_setpoint_tavolo_main, "%i °C",
+                                  model_get_setpoint_temperatura_tavolo(pmodel));
             break;
 
         case EDITING_TARGET_TEMPERATURA_BRACCIOLO:

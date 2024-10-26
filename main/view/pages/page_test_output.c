@@ -7,7 +7,7 @@
 #include "view/intl/intl.h"
 #include "view/common.h"
 #include "gel/pagemanager/page_manager.h"
-
+#include <esp_log.h>
 
 
 enum {
@@ -20,12 +20,14 @@ enum {
 
 struct page_data {
     view_common_led_button_t led_buttons[NUM_OUTPUTS];
-    uint8_t                  output_map;
+    uint16_t                 output_map;
 };
 
 
 static void page_update(model_t *pmodel, struct page_data *pdata);
 
+
+static const char *TAG = "PageTestOutput";
 
 /*static const char *descriptions[NUM_OUTPUTS] = {
     "Pompa vapore", "Risc. vapore", "Piano", "Bracc.", "Ferro 1", "Ferro 2", "Luce",
@@ -40,6 +42,9 @@ static const digout_t digout_codes[NUM_OUTPUTS] = {
     DIGOUT_RISCALDAMENTO_FERRO_1,
     DIGOUT_RISCALDAMENTO_FERRO_2,
     DIGOUT_LUCE,
+    DIGOUT_TAGLIOLA_1,
+    DIGOUT_TAGLIOLA_2,
+    DIGOUT_AUX,
 };
 
 
@@ -58,7 +63,7 @@ static void open_page(model_t *pmodel, void *args) {
 
     cont = view_common_create_title(lv_scr_act(), "Collaudo uscite", BACK_BTN_ID, PREV_BTN_ID, NEXT_BTN_ID);
 
-    static lv_coord_t col_dsc[] = {150, 150, 150, LV_GRID_TEMPLATE_LAST};
+    static lv_coord_t col_dsc[] = {110, 110, 110, 110, LV_GRID_TEMPLATE_LAST};
     static lv_coord_t row_dsc[] = {60, 60, 60, LV_GRID_TEMPLATE_LAST};
 
     /*Create a container with grid*/
@@ -72,13 +77,20 @@ static void open_page(model_t *pmodel, void *args) {
     lv_obj_set_style_pad_column(cont, 5, LV_STATE_DEFAULT);
     lv_obj_align(cont, LV_ALIGN_BOTTOM_MID, 0, 0);
 
-    pdata->led_buttons[0] = view_common_create_led_button(cont, "Spazzola", OUTPUT_BTN_ID, 0);
-    lv_obj_set_width(pdata->led_buttons[0].btn, 300);
-    lv_obj_set_grid_cell(pdata->led_buttons[0].btn, LV_GRID_ALIGN_CENTER, 0, 2, LV_GRID_ALIGN_CENTER, 0, 1);
+    pdata->led_buttons[7] = view_common_create_led_button(cont, "Tagliola 1", OUTPUT_BTN_ID, 7);
+    lv_obj_set_grid_cell(pdata->led_buttons[7].btn, LV_GRID_ALIGN_CENTER, 0, 1, LV_GRID_ALIGN_CENTER, 0, 1);
+
+    pdata->led_buttons[8] = view_common_create_led_button(cont, "Tagliola 2", OUTPUT_BTN_ID, 8);
+    lv_obj_set_grid_cell(pdata->led_buttons[8].btn, LV_GRID_ALIGN_CENTER, 1, 1, LV_GRID_ALIGN_CENTER, 0, 1);
+
+    pdata->led_buttons[9] = view_common_create_led_button(cont, "AUX", OUTPUT_BTN_ID, 9);
+    lv_obj_set_grid_cell(pdata->led_buttons[9].btn, LV_GRID_ALIGN_CENTER, 3, 1, LV_GRID_ALIGN_CENTER, 0, 1);
 
     pdata->led_buttons[1] = view_common_create_led_button(cont, "Riscaldamento vapore", OUTPUT_BTN_ID, 1);
-    lv_obj_set_width(pdata->led_buttons[1].btn, 300);
-    lv_obj_set_grid_cell(pdata->led_buttons[1].btn, LV_GRID_ALIGN_CENTER, 0, 2, LV_GRID_ALIGN_CENTER, 1, 1);
+    lv_obj_set_grid_cell(pdata->led_buttons[1].btn, LV_GRID_ALIGN_CENTER, 0, 1, LV_GRID_ALIGN_CENTER, 1, 1);
+
+    pdata->led_buttons[0] = view_common_create_led_button(cont, "Spazzola", OUTPUT_BTN_ID, 0);
+    lv_obj_set_grid_cell(pdata->led_buttons[0].btn, LV_GRID_ALIGN_CENTER, 1, 1, LV_GRID_ALIGN_CENTER, 1, 1);
 
     pdata->led_buttons[2] = view_common_create_led_button(cont, "Piano", OUTPUT_BTN_ID, 2);
     lv_obj_set_grid_cell(pdata->led_buttons[2].btn, LV_GRID_ALIGN_CENTER, 2, 1, LV_GRID_ALIGN_CENTER, 0, 1);
@@ -114,15 +126,20 @@ static view_message_t page_event(model_t *pmodel, void *args, view_event_t event
                     switch (event.data.id) {
                         case OUTPUT_BTN_ID:
                             msg.cmsg.code          = VIEW_CONTROLLER_MESSAGE_CODE_TEST_OUTPUT;
-                            msg.cmsg.digout.number = digout_codes[event.data.number];
+                            uint32_t digout_code   = digout_codes[event.data.number];
+                            msg.cmsg.digout.number = digout_code;
 
-                            if ((pdata->output_map & (1 << event.data.number)) > 0) {
-                                pdata->output_map &= ~(1 << event.data.number);
+                            ESP_LOGI(TAG, "%i %i %X", event.data.number, msg.cmsg.digout.number, pdata->output_map);
+
+                            if ((pdata->output_map & (1 << digout_code)) > 0) {
+                                pdata->output_map &= ~(1 << digout_code);
                                 msg.cmsg.digout.value = 0;
                             } else {
-                                pdata->output_map |= 1 << event.data.number;
+                                pdata->output_map |= 1 << digout_code;
                                 msg.cmsg.digout.value = 1;
                             }
+
+                            ESP_LOGI(TAG, "map %X", pdata->output_map);
 
                             page_update(pmodel, pdata);
                             break;
@@ -161,7 +178,11 @@ static view_message_t page_event(model_t *pmodel, void *args, view_event_t event
 
 static void page_update(model_t *pmodel, struct page_data *pdata) {
     for (size_t i = 0; i < NUM_OUTPUTS; i++) {
-        if ((pdata->output_map & (1 << i)) > 0) {
+        lv_obj_set_size(pdata->led_buttons[i].btn, 110, 65);
+
+        uint32_t mask = (1 << digout_codes[i]);
+
+        if ((pdata->output_map & mask) > 0) {
             lv_led_on(pdata->led_buttons[i].led);
         } else {
             lv_led_off(pdata->led_buttons[i].led);

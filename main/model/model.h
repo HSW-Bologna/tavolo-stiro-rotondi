@@ -6,7 +6,7 @@
 #include <stdlib.h>
 
 
-#define NUM_OUTPUTS 7
+#define NUM_OUTPUTS 10
 
 
 #define GETTER(name, field)                                                                                            \
@@ -56,10 +56,13 @@ typedef enum {
     DIGOUT_RISCALDAMENTO_VAPORE,
     DIGOUT_RISCALDAMENTO_PIANO,
     DIGOUT_RISCALDAMENTO_BRACCIOLO,
-    DIGOUT_RISCALDAMENTO_FERRO_1,
-    DIGOUT_RISCALDAMENTO_FERRO_2,
+    DIGOUT_RISCALDAMENTO_FERRO_1 = 5,
+    DIGOUT_RISCALDAMENTO_FERRO_2 = 4,
     DIGOUT_LUCE,
     DIGOUT_RECUPERATOR,
+    DIGOUT_AUX = 8,
+    DIGOUT_TAGLIOLA_1,
+    DIGOUT_TAGLIOLA_2,
 } digout_t;
 
 
@@ -164,7 +167,7 @@ typedef struct {
 
     struct {
         // Outputs
-        uint8_t relays;
+        uint16_t relays;
 
         // Inputs
         uint8_t  inputs[NUM_INPUTS];
@@ -206,6 +209,8 @@ uint8_t  model_is_in_standby(model_t *pmodel);
 void     model_set_machine_standby(model_t *pmodel);
 void     model_set_machine_on(model_t *pmodel);
 void     model_set_machine_test(model_t *pmodel);
+void     model_set_blow_trap(model_t *model, uint8_t value);
+void     model_set_suction_trap(model_t *model, uint8_t value);
 
 GETTER(minion_relays, minion.relays);
 GETTER(ferro_1, run.ferro_1);

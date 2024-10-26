@@ -253,6 +253,26 @@ uint16_t model_get_language(model_t *pmodel) {
 }
 
 
+void model_set_suction_trap(model_t *model, uint8_t value) {
+    assert(model != NULL);
+    if (value) {
+        model->minion.relays |= 1 << DIGOUT_TAGLIOLA_1;
+    } else {
+        model->minion.relays &= ~(1 << DIGOUT_TAGLIOLA_1);
+    }
+}
+
+
+void model_set_blow_trap(model_t *model, uint8_t value) {
+    assert(model != NULL);
+    if (value) {
+        model->minion.relays |= 1 << DIGOUT_TAGLIOLA_2;
+    } else {
+        model->minion.relays &= ~(1 << DIGOUT_TAGLIOLA_2);
+    }
+}
+
+
 uint8_t model_should_activate_table(model_t *pmodel) {
     assert(pmodel != NULL);
     if (model_get_richiesta_temperatura_tavolo(pmodel)) {

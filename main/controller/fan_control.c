@@ -7,7 +7,7 @@
 #define PHASE_CUT_SOFFIO      PHASE_CUT_FAN_1
 #define PHASE_CUT_ASPIRAZIONE PHASE_CUT_FAN_2
 
-#define SWITCH_DELAY_MS 100UL
+#define SWITCH_DELAY_MS 1000UL
 
 
 typedef enum {
@@ -30,6 +30,11 @@ void fan_control(model_t *pmodel) {
 
     uint8_t suction_pedal = model_digin_read(pmodel, DIGIN_SUCTION_PEDAL);
     uint8_t blowing_pedal = model_digin_read(pmodel, DIGIN_BLOWING_PEDAL);
+    uint8_t switch_pedal  = model_digin_read(pmodel, DIGIN_AIR_FLOW_SWITCH);
+
+    if (!model_is_in_test(pmodel)) {
+        model_set_suction_trap(pmodel, switch_pedal);
+    }
 
     switch (state) {
         case STATE_STOPPED:
@@ -75,20 +80,36 @@ void fan_control(model_t *pmodel) {
 
     switch (state) {
         case STATE_SUCTION_DELAY:
-        case STATE_BLOWING_DELAY:
         case STATE_STOPPED:
             model_set_aspirazione_on(pmodel, 0);
             model_set_soffio_on(pmodel, 0);
+            if (!model_is_in_test(pmodel)) {
+                model_set_blow_trap(pmodel, 0);
+            }
             break;
 
         case STATE_SUCTION:
             model_set_aspirazione_on(pmodel, 1);
             model_set_soffio_on(pmodel, 0);
+            if (!model_is_in_test(pmodel)) {
+                model_set_blow_trap(pmodel, 0);
+            }
+            break;
+
+        case STATE_BLOWING_DELAY:
+            model_set_aspirazione_on(pmodel, 0);
+            model_set_soffio_on(pmodel, 0);
+            if (!model_is_in_test(pmodel)) {
+                model_set_blow_trap(pmodel, 1);
+            }
             break;
 
         case STATE_BLOWING:
             model_set_aspirazione_on(pmodel, 0);
             model_set_soffio_on(pmodel, 1);
+            if (!model_is_in_test(pmodel)) {
+                model_set_blow_trap(pmodel, 1);
+            }
             break;
     }
 }

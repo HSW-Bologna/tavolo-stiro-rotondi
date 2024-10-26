@@ -35,9 +35,9 @@ struct __attribute__((packed)) task_message {
     task_message_tag_t tag;
     union {
         struct {
-            uint8_t relays;
-            uint8_t percentage_suction;
-            uint8_t percentage_blow;
+            uint16_t relays;
+            uint8_t  percentage_suction;
+            uint8_t  percentage_blow;
         } outputs;
     } as;
 };
@@ -86,7 +86,7 @@ void modbus_read_state(void) {
 }
 
 
-void modbus_write_outputs(uint8_t relays, uint8_t percentage_suction, uint8_t percentage_blow) {
+void modbus_write_outputs(uint16_t relays, uint8_t percentage_suction, uint8_t percentage_blow) {
     struct task_message msg = {.tag = TASK_MESSAGE_TAG_WRITE_OUTPUTS,
                                .as  = {
                                     .outputs =
@@ -155,6 +155,8 @@ static void modbus_task(void *args) {
                         message.as.outputs.relays,
                         message.as.outputs.percentage_suction | (message.as.outputs.percentage_blow << 8),
                     };
+
+                    ESP_LOGI(TAG, "Relays %X", message.as.outputs.relays);
 
                     if (write_holding_registers(&master, MINION_ADDR, HOLDING_REGISTER_RELAYS, values,
                                                 sizeof(values) / sizeof(values[0]))) {
@@ -332,14 +334,14 @@ static int read_input_registers(ModbusMaster *master, uint16_t *registers, uint8
                                          buffer, len);
 
         if (!modbusIsOk(err)) {
-            //ESP_LOGW(TAG, "Read input registers for %i error (%i): %i %i", address, len, err.source, err.error);
+            // ESP_LOGW(TAG, "Read input registers for %i error (%i): %i %i", address, len, err.source, err.error);
             res = 1;
             vTaskDelay(pdMS_TO_TICKS(MODBUS_TIMEOUT));
         }
     } while (res && ++counter < MODBUS_COMMUNICATION_ATTEMPTS);
 
     if (res) {
-        //ESP_LOGW(TAG, "ERROR!");
+        // ESP_LOGW(TAG, "ERROR!");
     } else {
         ESP_LOGD(TAG, "Success");
     }

@@ -120,6 +120,7 @@ void controller_process_message(model_t *pmodel, view_controller_message_t *msg)
 
         case VIEW_CONTROLLER_MESSAGE_CODE_TEST_OUTPUT:
             model_set_relay(pmodel, msg->digout.number, msg->digout.value);
+            ESP_LOGI(TAG, "Relays %i", pmodel->minion.relays);
             break;
 
         case VIEW_CONTROLLER_MESSAGE_CODE_TOGGLE_BOILER:
@@ -156,8 +157,8 @@ void controller_manage(model_t *pmodel) {
                         }
 
                         if (!model_is_in_test(pmodel)) {
-                            model_set_relay(pmodel, DIGOUT_RECUPERATOR,
-                                            model_digin_read(pmodel, DIGIN_AIR_FLOW_SWITCH));
+                            // model_set_relay(pmodel, DIGOUT_RECUPERATOR, model_digin_read(pmodel,
+                            // DIGIN_AIR_FLOW_SWITCH));
                         }
 
                         boiler_control_value_changed(pmodel);
@@ -361,8 +362,11 @@ static void update_outputs(void *mem, void *arg) {
                 break;
 
             case FAN_CONFIG_SUCTION_ONLY:
+                modbus_write_outputs(model_get_minion_relays(pmodel), model_get_percentuale_aspirazione(pmodel), 0);
+                break;
+
             case FAN_CONFIG_BOTH:
-                modbus_write_outputs(model_get_minion_relays(pmodel), 0, model_get_percentuale_soffio(pmodel));
+                modbus_write_outputs(model_get_minion_relays(pmodel), model_get_percentuale_aspirazione(pmodel), model_get_percentuale_soffio(pmodel));
                 break;
         }
     } else {

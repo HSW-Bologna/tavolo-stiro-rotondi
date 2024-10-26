@@ -36,7 +36,7 @@ void    modbus_init(void);
 uint8_t modbus_get_response(modbus_response_t *response);
 void    modbus_read_firmware_version(void);
 void    modbus_read_state(void);
-void    modbus_write_outputs(uint8_t relays, uint8_t percentage_suction, uint8_t percentage_blow);
+void    modbus_write_outputs(uint16_t relays, uint8_t percentage_suction, uint8_t percentage_blow);
 
 
 #endif

@@ -1,3 +1,4 @@
+.simulator_db.json
 .sconsign.dblite
 .env
 .mypy_cache

@@ -42,7 +42,8 @@ void        view_event(view_event_t event);
 
 
 extern const pman_page_t page_main, page_test_output, page_test_input, page_password, page_test_analogs,
-    page_parameters, page_test_fans, page_menu, page_number_parameter, page_machine_model, page_standby;
+    page_parameters, page_test_fans, page_menu, page_number_parameter, page_machine_model, page_standby,
+    page_height_presets;
 
 
 #endif

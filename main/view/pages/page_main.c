@@ -82,6 +82,7 @@ enum {
     BTN_DISMISS_ALARM_ID,
     SETTINGS_CONT_ID,
     POWER_BTN_ID,
+    HEIGHT_REGULATION_BTN_ID,
     BLANKET_ID,
 };
 
@@ -106,6 +107,9 @@ struct page_data {
     lv_obj_t *btn_steam_gun;
     lv_obj_t *btn_luce;
     lv_obj_t *btn_menu;
+    lv_obj_t *btn_height_regulations[HEIGHT_REGULATION_PRESETS];
+
+    lv_obj_t *cont_height_regulation;
 
     lv_obj_t *img_ventola_aspirazione;
     lv_obj_t *img_ventola_soffio;
@@ -187,6 +191,8 @@ static void      pause_background_animations(struct page_data *pdata);
 static void      start_background_animations(struct page_data *pdata);
 static lv_obj_t *popup_alarm_create(lv_obj_t *root, lv_obj_t **lbl, int dismiss_id);
 static void      drag_event_handler(lv_event_t *e);
+static uint8_t   is_screen_full(model_t *model);
+static uint8_t   is_screen_almost_full(model_t *model);
 
 
 static const char *TAG = "PageMain";
@@ -235,18 +241,22 @@ static void open_page(model_t *pmodel, void *args) {
     lv_obj_set_style_text_font(pdata->lbl_setpoint_tavolo_main, STYLE_FONT_MEDIUM, LV_STATE_DEFAULT);
     lv_obj_align(pdata->lbl_setpoint_tavolo_main, LV_ALIGN_CENTER, 0, -28);
     lv_obj_add_flag(pdata->btn_tavolo, LV_OBJ_FLAG_CHECKABLE);
-    lv_obj_set_width(pdata->btn_tavolo, 180);
-    lv_img_set_zoom(pdata->img_tavolo, 320);
-    lv_img_set_zoom(pdata->img_calore_tavolo, 320);
+    if (!is_screen_almost_full(pmodel)) {
+        lv_obj_set_width(pdata->btn_tavolo, 180);
+        lv_img_set_zoom(pdata->img_tavolo, 320);
+        lv_img_set_zoom(pdata->img_calore_tavolo, 320);
+    }
 
     // Bottone Bracciolo
     pdata->btn_bracciolo        = heat_image_button(cont, &img_bracciolo_off, 36, 0, 1, BRACCIOLO_BTN_ID);
     pdata->img_bracciolo        = lv_obj_get_child(pdata->btn_bracciolo, 0);
     pdata->img_calore_bracciolo = lv_obj_get_child(pdata->btn_bracciolo, 1);
     lv_obj_add_flag(pdata->btn_bracciolo, LV_OBJ_FLAG_CHECKABLE);
-    lv_obj_set_width(pdata->btn_bracciolo, 180);
-    lv_img_set_zoom(pdata->img_bracciolo, 320);
-    lv_img_set_zoom(pdata->img_calore_bracciolo, 320);
+    if (!is_screen_almost_full(pmodel)) {
+        lv_obj_set_width(pdata->btn_bracciolo, 180);
+        lv_img_set_zoom(pdata->img_bracciolo, 320);
+        lv_img_set_zoom(pdata->img_calore_bracciolo, 320);
+    }
 
     // Bottone Aspirazione
     btn = view_common_base_button_create(cont, SUCTION_BTN_ID);
@@ -310,17 +320,59 @@ static void open_page(model_t *pmodel, void *args) {
     // Bottone Fotocellula
     pdata->btn_steam_gun = view_common_image_button_create(cont, &img_fotocellula_sx, STEAM_GUN_BTN_ID);
 
+    {     // Regolazione altezza
+        lv_obj_t *obj = lv_obj_create(cont);
+        lv_obj_add_style(obj, (lv_style_t *)&style_transparent_cont, LV_STATE_DEFAULT);
+        lv_obj_set_style_pad_ver(obj, 4, LV_STATE_DEFAULT);
+        lv_obj_set_size(obj, COL_SIZE - 4, ROW_SIZE - 4);
+        lv_obj_set_layout(obj, LV_LAYOUT_FLEX);
+        lv_obj_set_flex_flow(obj, LV_FLEX_FLOW_COLUMN_REVERSE);
+        lv_obj_set_flex_align(obj, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+
+        for (size_t i = 0; i < HEIGHT_REGULATION_PRESETS; i++) {
+            lv_obj_t *btn = lv_btn_create(obj);
+            lv_obj_add_style(btn, (lv_style_t *)&style_black_border, LV_STATE_DEFAULT);
+            lv_obj_add_style(btn, (lv_style_t *)&style_btn_checked, LV_STATE_CHECKED);
+            view_register_object_default_callback_with_number(btn, HEIGHT_REGULATION_BTN_ID, i);
+            lv_obj_set_width(btn, COL_SIZE - 8);
+            lv_obj_set_flex_grow(btn, 1);
+            pdata->btn_height_regulations[i] = btn;
+
+            lv_obj_t *label = lv_label_create(btn);
+            lv_obj_align(label, LV_ALIGN_CENTER, 0, 0);
+            lv_obj_set_style_text_font(label, STYLE_FONT_MEDIUM, LV_STATE_DEFAULT);
+
+            if (i == 0) {
+                lv_label_set_text(label, LV_SYMBOL_UP);
+            } else if (i == 1) {
+                lv_label_set_text(label, LV_SYMBOL_UP LV_SYMBOL_UP);
+            } else {
+                lv_label_set_text(label, LV_SYMBOL_UP LV_SYMBOL_UP LV_SYMBOL_UP);
+            }
+        }
+
+        pdata->cont_height_regulation = obj;
+    }
+
     // Bottone Luce
     pdata->btn_luce = view_common_image_button_create(cont, &img_luce_off, LUCE_BTN_ID);
     lv_obj_add_flag(pdata->btn_luce, LV_OBJ_FLAG_CHECKABLE);
+    if (is_screen_full(pmodel)) {
+        lv_obj_set_height(pdata->btn_luce, ROW_SIZE / 2 - 4);
+        lv_img_set_zoom(lv_obj_get_child(pdata->btn_luce, 0), 180);
+    }
+
+    // Bottone Spegnimento
+    lv_obj_t *btn_power = view_common_image_button_create(cont, &img_power, POWER_BTN_ID);
+    if (is_screen_full(pmodel)) {
+        lv_obj_set_height(btn_power, ROW_SIZE / 2 - 4);
+        lv_img_set_zoom(lv_obj_get_child(btn_power, 0), 180);
+    }
 
     pdata->anim_ventola_aspirazione = fan_animation(pdata->img_ventola_aspirazione, 250);
 
     pdata->anim_ventola_soffio = fan_animation(pdata->img_ventola_soffio, 2000);
     pdata->anim_suction_fan    = fan_animation(pdata->img_ventola_aspirazione, 2000);
-
-    // Bottone Spegnimento
-    view_common_image_button_create(cont, &img_power, POWER_BTN_ID);
 
     // Bottone Menu
     lv_obj_t *settings_cont = lv_obj_create(lv_scr_act());
@@ -548,6 +600,11 @@ static view_message_t page_event(model_t *pmodel, void *args, view_event_t event
                                 msg.beep = 1;
                             }
                             break;
+
+                        case HEIGHT_REGULATION_BTN_ID:
+                            pmodel->configuration.selected_height_preset = event.data.number;
+                            update_page(pmodel, pdata, 1);
+                            break;
                     }
 
                     break;
@@ -581,6 +638,11 @@ static view_message_t page_event(model_t *pmodel, void *args, view_event_t event
                             pmodel->run.machine_state = MACHINE_STATE_STANDBY;
                             msg.vmsg.code             = VIEW_PAGE_MESSAGE_CODE_CHANGE_PAGE;
                             msg.vmsg.page             = &page_standby;
+                            break;
+
+                        case HEIGHT_REGULATION_BTN_ID:
+                            msg.vmsg.code = VIEW_PAGE_MESSAGE_CODE_CHANGE_PAGE;
+                            msg.vmsg.page = &page_height_presets;
                             break;
                     }
                     break;
@@ -724,6 +786,11 @@ static void update_page(model_t *pmodel, struct page_data *pdata, uint8_t restar
     view_common_set_hidden(pdata->btn_bracciolo, !pmodel->configuration.heated_arm_enabled);
     view_common_set_hidden(pdata->btn_steam_gun, !pmodel->configuration.steam_gun_enabled);
     view_common_set_hidden(pdata->btn_boiler, !pmodel->configuration.boiler_enabled);
+    view_common_set_hidden(pdata->cont_height_regulation, !pmodel->configuration.height_regulation);
+
+    for (size_t i = 0; i < HEIGHT_REGULATION_PRESETS; i++) {
+        view_common_set_checked(pdata->btn_height_regulations[i], i == pmodel->configuration.selected_height_preset);
+    }
 
     if (model_get_soffio_on(pmodel)) {
         lv_anim_set_time(&pdata->anim_ventola_soffio, speed_to_period_transform[model_get_velocita_soffio(pmodel)]);
@@ -1250,6 +1317,23 @@ static void drag_event_handler(lv_event_t *e) {
 
 static void snap_event_handler(lv_event_t *e) {}
 
+
+static uint8_t is_screen_almost_full(model_t *model) {
+    return (model->configuration.light_enabled + model->configuration.second_iron_enabled +
+            model_is_blow_fan_configured(model) + model->configuration.heated_arm_enabled +
+            model->configuration.steam_gun_enabled + model->configuration.boiler_enabled) +
+               model->configuration.height_regulation >
+           4;
+}
+
+
+static uint8_t is_screen_full(model_t *model) {
+    return (model->configuration.light_enabled + model->configuration.second_iron_enabled +
+            model_is_blow_fan_configured(model) + model->configuration.heated_arm_enabled +
+            model->configuration.steam_gun_enabled + model->configuration.boiler_enabled) +
+               model->configuration.height_regulation >=
+           7;
+}
 
 
 const pman_page_t page_main = {

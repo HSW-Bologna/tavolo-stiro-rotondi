@@ -16,6 +16,7 @@ enum {
     HYSTERESIS_PARAMETER_ID,
     FAN_PARAMETER_ID,
     LIGHT_PARAMETER_ID,
+    HEIGHT_REGULATION_PARAMETER_ID,
     SECOND_IRON_PARAMETER_ID,
     STEAM_GUN_PARAMETER_ID,
     HEATED_ARM_PARAMETER_ID,
@@ -38,6 +39,7 @@ static void      update_adc_threshold(model_t *pmodel, int value);
 static void      update_hysteresis(model_t *pmodel, int value);
 static void      update_fan_config(model_t *pmodel, int value);
 static void      update_light_enabled(model_t *pmodel, int value);
+static void      update_height_regulation(model_t *pmodel, int value);
 static void      update_boiler_enabled(model_t *pmodel, int value);
 static void      update_second_iron_enabled(model_t *pmodel, int value);
 static void      update_steam_gun_enabled(model_t *pmodel, int value);
@@ -69,6 +71,9 @@ static void open_page(model_t *pmodel, void *args) {
 
     char string[32] = {0};
     btn_parameter_create(cont, "Luce", pmodel->configuration.light_enabled ? "Si" : "No", LIGHT_PARAMETER_ID);
+
+    btn_parameter_create(cont, "Regolazione altezza", pmodel->configuration.height_regulation ? "Si" : "No",
+                         HEIGHT_REGULATION_PARAMETER_ID);
 
     btn_parameter_create(cont, "Secondo ferro", pmodel->configuration.second_iron_enabled ? "Si" : "No",
                          SECOND_IRON_PARAMETER_ID);
@@ -127,6 +132,23 @@ static view_message_t page_event(model_t *pmodel, void *args, view_event_t event
                             metadata.name          = "Abilitazione Luce";
                             metadata.to_string     = NULL;
                             metadata.update        = update_light_enabled;
+
+                            msg.vmsg.code  = VIEW_PAGE_MESSAGE_CODE_CHANGE_PAGE_EXTRA;
+                            msg.vmsg.page  = &page_number_parameter;
+                            msg.vmsg.extra = &metadata;
+                            break;
+                        }
+
+                        case HEIGHT_REGULATION_PARAMETER_ID: {
+                            static number_parameter_metadata_t metadata = {0};
+
+                            metadata.initial_value = pmodel->configuration.height_regulation;
+                            metadata.min           = 0;
+                            metadata.max           = 1;
+                            metadata.step          = 0;
+                            metadata.name          = "Regolazione altezza";
+                            metadata.to_string     = NULL;
+                            metadata.update        = update_height_regulation;
 
                             msg.vmsg.code  = VIEW_PAGE_MESSAGE_CODE_CHANGE_PAGE_EXTRA;
                             msg.vmsg.page  = &page_number_parameter;
@@ -326,6 +348,11 @@ static void fan_to_string(char *string, size_t len, int value) {
             snprintf(string, len, "Solo asp.");
             break;
     }
+}
+
+
+static void update_height_regulation(model_t *pmodel, int value) {
+    pmodel->configuration.height_regulation = value;
 }
 
 

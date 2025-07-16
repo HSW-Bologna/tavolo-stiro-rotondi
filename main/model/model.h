@@ -39,9 +39,10 @@
     SETTER(name, field)
 
 
-#define NUM_INPUTS      5
-#define NUM_SPEED_STEPS 8
-#define DIGOUT_GUN      DIGOUT_POMPA
+#define NUM_INPUTS                5
+#define NUM_SPEED_STEPS           8
+#define DIGOUT_GUN                DIGOUT_POMPA
+#define HEIGHT_REGULATION_PRESETS 3
 
 
 typedef enum {
@@ -56,8 +57,8 @@ typedef enum {
     DIGOUT_RISCALDAMENTO_VAPORE,
     DIGOUT_RISCALDAMENTO_PIANO,
     DIGOUT_RISCALDAMENTO_BRACCIOLO,
-    DIGOUT_RISCALDAMENTO_FERRO_1 = 5,
-    DIGOUT_RISCALDAMENTO_FERRO_2 = 4,
+    DIGOUT_RISCALDAMENTO_FERRO_2,
+    DIGOUT_RISCALDAMENTO_FERRO_1,
     DIGOUT_LUCE,
     DIGOUT_RECUPERATOR,
     DIGOUT_AUX = 8,
@@ -142,6 +143,9 @@ typedef struct {
         uint8_t  numero_sonde;
         uint16_t boiler_adc_threshold;
         uint8_t  fan_config;
+        uint8_t  height_regulation;
+        uint16_t selected_height_preset;
+        uint16_t height_regulation_presets[HEIGHT_REGULATION_PRESETS];
     } configuration;
 
     struct {

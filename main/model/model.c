@@ -16,6 +16,8 @@ void model_init(model_t *pmodel) {
     assert(pmodel != NULL);
     (void)TAG;
 
+    memset(pmodel, 0, sizeof(*pmodel));
+
     pmodel->run.machine_state                   = MACHINE_STATE_ON;
     pmodel->configuration.language              = 0;
     pmodel->run.luce                            = 0;
@@ -53,6 +55,10 @@ void model_init(model_t *pmodel) {
     pmodel->configuration.boiler_adc_threshold           = 2000;
     pmodel->configuration.isteresi_caldaia               = 15;
     pmodel->configuration.fan_config                     = FAN_CONFIG_SWITCH;
+    pmodel->configuration.height_regulation              = 0;
+    pmodel->configuration.height_regulation_presets[0]              = 0;
+    pmodel->configuration.height_regulation_presets[1]              = 50;
+    pmodel->configuration.height_regulation_presets[2]              = 100;
 
     pmodel->configuration.percentuali_soffio[0] = 40;
     pmodel->configuration.percentuali_soffio[1] = 45;
@@ -275,6 +281,8 @@ void model_set_blow_trap(model_t *model, uint8_t value) {
 
 uint8_t model_should_activate_table(model_t *pmodel) {
     assert(pmodel != NULL);
+    // FIXME: pezza fiera
+    return model_get_richiesta_temperatura_tavolo(pmodel);
     if (model_get_richiesta_temperatura_tavolo(pmodel)) {
         return (model_get_temperatura_tavolo(pmodel) + model_get_isteresi_tavolo(pmodel) <
                 model_get_setpoint_temperatura_tavolo(pmodel));

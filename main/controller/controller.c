@@ -7,14 +7,14 @@
 #include "utils/utils.h"
 #include "gel/data_structures/watcher.h"
 #include "gel/timer/timecheck.h"
-#include "modbus.h"
+#include "minion.h"
 #include "configuration.h"
 #include "hysteresis_control.h"
 #include "fan_control.h"
 #include "boiler_control.h"
 
 
-#define NUM_WATCHED_VARIABLES 9
+#define NUM_WATCHED_VARIABLES 12
 
 
 static void    refresh_light(void *mem, void *arg);
@@ -32,6 +32,7 @@ static void    turn_on_arm(model_t *pmodel);
 static uint8_t not_in_test(model_t *pmodel);
 static void    update_outputs(void *mem, void *arg);
 static void    refresh_boiler(void *mem, void *arg);
+static void    refresh_height_regulation(void *mem, void *arg);
 
 
 static const char *TAG = "Controller";
@@ -62,10 +63,11 @@ static uint16_t  variables_output[2]                          = {0};
 static uint8_t   light_state                                  = 0;
 static uint8_t   second_iron_state                            = 0;
 static uint8_t   gun_state                                    = 0;
+static uint8_t   update_height_regulation                     = 0;
 
 
 void controller_init(model_t *pmodel) {
-    modbus_init();
+    minion_init();
 
     tavolo_control.pmodel = pmodel;
     tavolo_control.sm     = hcontrol_state_machine_new();
@@ -99,6 +101,10 @@ void controller_init(model_t *pmodel) {
     watched_variables[i++] = WATCHER(&second_iron_state, refresh_ferro_2, pmodel);
     watched_variables[i++] = WATCHER(&pmodel->minion.inputs, refresh_ventole, pmodel);
     watched_variables[i++] = WATCHER(&pmodel->configuration.boiler_enabled, refresh_boiler, pmodel);
+    watched_variables[i++] = WATCHER(&pmodel->configuration.height_regulation, refresh_height_regulation, pmodel);
+    watched_variables[i++] = WATCHER_ARRAY(pmodel->configuration.height_regulation_presets, HEIGHT_REGULATION_PRESETS,
+                                           refresh_height_regulation, pmodel);
+    watched_variables[i++] = WATCHER(&pmodel->configuration.selected_height_preset, refresh_height_regulation, pmodel);
     watched_variables[i++] = WATCHER_ARRAY(variables_temperature, 6, refresh_temperature, pmodel);
     assert(i == NUM_WATCHED_VARIABLES);
     watched_variables[i] = WATCHER_NULL;
@@ -136,8 +142,8 @@ void controller_manage(model_t *pmodel) {
     static unsigned long ts_5s             = 0;
     static uint8_t       old_vapore        = 0;
 
-    modbus_response_t response;
-    if (modbus_get_response(&response)) {
+    minion_response_t response;
+    if (minion_get_response(&response)) {
         if (response.error) {
 #ifndef SIMULATOR
             model_set_alarm_communication(pmodel, 1);
@@ -145,7 +151,7 @@ void controller_manage(model_t *pmodel) {
             view_event((view_event_t){.code = VIEW_EVENT_CODE_UPDATE});
         } else {
             switch (response.tag) {
-                case MODBUS_RESPONSE_TAG_READ_STATE: {
+                case MINION_RESPONSE_TAG_READ_STATE: {
                     if (model_update_minion_state(pmodel, response.as.state.inputs_map, response.as.state.liquid_levels,
                                                   response.as.state.ptc_adcs, response.as.state.ptc_temperatures)) {
                         uint8_t vapore = model_digin_read(pmodel, DIGIN_VAP);
@@ -174,13 +180,13 @@ void controller_manage(model_t *pmodel) {
     }
 
     if (is_expired(ts_minion_refresh, get_millis(), 200)) {
-        modbus_read_state();
+        minion_read_state();
         ts_minion_refresh = get_millis();
     }
 
     if (is_expired(ts_1s, get_millis(), 2000UL)) {
         // FIXME: pezza per fiera, c'e' da capire come deve funzionare
-        // modbus_write_outputs(model_get_minion_relays(pmodel), model_get_percentuale_aspirazione(pmodel),
+        // minion_write_outputs(model_get_minion_relays(pmodel), model_get_percentuale_aspirazione(pmodel),
         // model_get_percentuale_soffio(pmodel));
         update_outputs(NULL, pmodel);
         ts_1s = get_millis();
@@ -192,6 +198,13 @@ void controller_manage(model_t *pmodel) {
                  model_get_probe_level(pmodel, LIQUID_LEVEL_PROBE_1),
                  model_get_probe_level(pmodel, LIQUID_LEVEL_PROBE_2));
         ts_5s = get_millis();
+    }
+
+    if (update_height_regulation) {
+        minion_height_regulator_update(
+            pmodel->configuration.height_regulation,
+            pmodel->configuration.height_regulation_presets[pmodel->configuration.selected_height_preset]);
+        update_height_regulation = 0;
     }
 
     boiler_control_manage_callbacks(pmodel);
@@ -258,6 +271,13 @@ static void refresh_temperature(void *mem, void *arg) {
     (void)arg;
     hcontrol_value_changed(&tavolo_control);
     hcontrol_value_changed(&bracciolo_control);
+}
+
+
+static void refresh_height_regulation(void *mem, void *arg) {
+    (void)mem;
+    (void)arg;
+    update_height_regulation = 1;
 }
 
 
@@ -354,22 +374,23 @@ static uint8_t not_in_test(model_t *pmodel) {
 static void update_outputs(void *mem, void *arg) {
     model_t *pmodel = arg;
     if (model_get_percentuale_aspirazione(pmodel) > 0) {
-        modbus_write_outputs(model_get_minion_relays(pmodel), model_get_percentuale_aspirazione(pmodel), 0);
+        minion_write_outputs(model_get_minion_relays(pmodel), model_get_percentuale_aspirazione(pmodel), 0);
     } else if (model_get_percentuale_soffio(pmodel) > 0) {
         switch (pmodel->configuration.fan_config) {
             case FAN_CONFIG_SWITCH:
-                modbus_write_outputs(model_get_minion_relays(pmodel), model_get_percentuale_soffio(pmodel), 100);
+                minion_write_outputs(model_get_minion_relays(pmodel), model_get_percentuale_soffio(pmodel), 100);
                 break;
 
             case FAN_CONFIG_SUCTION_ONLY:
-                modbus_write_outputs(model_get_minion_relays(pmodel), model_get_percentuale_aspirazione(pmodel), 0);
+                minion_write_outputs(model_get_minion_relays(pmodel), model_get_percentuale_aspirazione(pmodel), 0);
                 break;
 
             case FAN_CONFIG_BOTH:
-                modbus_write_outputs(model_get_minion_relays(pmodel), model_get_percentuale_aspirazione(pmodel), model_get_percentuale_soffio(pmodel));
+                minion_write_outputs(model_get_minion_relays(pmodel), model_get_percentuale_aspirazione(pmodel),
+                                     model_get_percentuale_soffio(pmodel));
                 break;
         }
     } else {
-        modbus_write_outputs(model_get_minion_relays(pmodel), 0, 0);
+        minion_write_outputs(model_get_minion_relays(pmodel), 0, 0);
     }
 }

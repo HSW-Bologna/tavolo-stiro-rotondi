@@ -15,6 +15,7 @@ enum {
     BACK_BTN_ID,
     PARAMETERS_BTN_ID,
     MACHINE_MODEL_BTN_ID,
+    HEIGHT_REGULATION_BTN_ID,
     TEST_BTN_ID,
 };
 
@@ -63,6 +64,17 @@ static void open_page(model_t *pmodel, void *args) {
     lv_obj_set_style_text_font(lbl, STYLE_FONT_MEDIUM, LV_STATE_DEFAULT);
     lv_obj_center(lbl);
     view_register_object_default_callback(btn, MACHINE_MODEL_BTN_ID);
+
+    btn = lv_btn_create(cont);
+    lv_obj_set_size(btn, 180, 80);
+    lbl = lv_label_create(btn);
+    lv_label_set_long_mode(lbl, LV_LABEL_LONG_WRAP);
+    lv_obj_set_style_text_align(lbl, LV_TEXT_ALIGN_CENTER, LV_STATE_DEFAULT);
+    lv_obj_set_width(lbl, 170);
+    lv_label_set_text(lbl, "Regolazione altezza");
+    lv_obj_set_style_text_font(lbl, STYLE_FONT_MEDIUM, LV_STATE_DEFAULT);
+    lv_obj_center(lbl);
+    view_register_object_default_callback(btn, HEIGHT_REGULATION_BTN_ID);
 }
 
 
@@ -94,6 +106,11 @@ static view_message_t page_event(model_t *pmodel, void *args, view_event_t event
                         case PARAMETERS_BTN_ID:
                             msg.vmsg.code = VIEW_PAGE_MESSAGE_CODE_CHANGE_PAGE;
                             msg.vmsg.page = &page_parameters;
+                            break;
+
+                        case HEIGHT_REGULATION_BTN_ID:
+                            msg.vmsg.code = VIEW_PAGE_MESSAGE_CODE_CHANGE_PAGE;
+                            msg.vmsg.page = &page_height_regulation;
                             break;
 
                         case MACHINE_MODEL_BTN_ID:

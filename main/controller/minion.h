@@ -6,16 +6,20 @@
 
 
 typedef enum {
-    MINION_RESPONSE_TAG_OK,
+    MINION_RESPONSE_TAG_ERROR,
     MINION_RESPONSE_TAG_FIRMWARE_VERSION,
     MINION_RESPONSE_TAG_START_OTA,
     MINION_RESPONSE_TAG_READ_STATE,
 } minion_response_tag_t;
 
+typedef enum {
+    MINION_MACHINE = 0,
+    MINION_ADJUSTABLE_LEGS,
+} minion_t;
 
 typedef struct {
     minion_response_tag_t tag;
-    uint8_t               error;
+    minion_t              minion;
     union {
         struct {
             uint16_t inputs_map;

@@ -39,10 +39,11 @@
     SETTER(name, field)
 
 
-#define NUM_INPUTS                5
-#define NUM_SPEED_STEPS           8
-#define DIGOUT_GUN                DIGOUT_POMPA
-#define HEIGHT_REGULATION_PRESETS 3
+#define NUM_INPUTS                      5
+#define NUM_SPEED_STEPS                 8
+#define DIGOUT_GUN                      DIGOUT_POMPA
+#define USER_HEIGHT_REGULATION_PRESETS  4
+#define SHAPE_HEIGHT_REGULATION_PRESETS 4
 
 
 typedef enum {
@@ -70,6 +71,8 @@ typedef enum {
 #define DIGIN_SUCTION_PEDAL   DIGIN_IN1
 #define DIGIN_BLOWING_PEDAL   DIGIN_IN2
 #define DIGIN_AIR_FLOW_SWITCH DIGIN_IN3
+#define DIGIN_FIRST_SHAPE     DIGIN_IN3
+#define DIGIN_SECOND_SHAPE    DIGIN_IN4
 
 
 typedef enum {
@@ -128,6 +131,7 @@ typedef struct {
         uint8_t  steam_gun_enabled;
         uint8_t  light_enabled;
         uint8_t  boiler_enabled;
+        uint8_t  board_temperature_control;
         uint16_t language;
         uint16_t setpoint_temperatura_tavolo;
         uint16_t setpoint_temperatura_bracciolo;
@@ -144,8 +148,9 @@ typedef struct {
         uint16_t boiler_adc_threshold;
         uint8_t  fan_config;
         uint8_t  height_regulation;
-        uint16_t selected_height_preset;
-        uint16_t height_regulation_presets[HEIGHT_REGULATION_PRESETS];
+        uint16_t selected_user_height_preset;
+        uint16_t user_height_presets[USER_HEIGHT_REGULATION_PRESETS];
+        uint16_t shape_height_presets[SHAPE_HEIGHT_REGULATION_PRESETS];
     } configuration;
 
     struct {
@@ -166,6 +171,7 @@ typedef struct {
         uint8_t test_percentage_suction;
         uint8_t test_percentage_blow;
         uint8_t alarm_communication;
+        uint8_t alarm_communication_adjustable_legs;
         uint8_t gun_state;
     } run;
 
@@ -215,6 +221,7 @@ void     model_set_machine_on(model_t *pmodel);
 void     model_set_machine_test(model_t *pmodel);
 void     model_set_blow_trap(model_t *model, uint8_t value);
 void     model_set_suction_trap(model_t *model, uint8_t value);
+uint16_t model_get_required_height(model_t *model);
 
 GETTER(minion_relays, minion.relays);
 GETTER(ferro_1, run.ferro_1);

@@ -13,10 +13,10 @@
 enum {
     BACK_BTN_ID,
     ADC_PARAMETER_ID,
+    BOARD_TEMPERATURE_CONTROL_PARAMETER_ID,
     HYSTERESIS_PARAMETER_ID,
     FAN_PARAMETER_ID,
     LIGHT_PARAMETER_ID,
-    HEIGHT_REGULATION_PARAMETER_ID,
     SECOND_IRON_PARAMETER_ID,
     STEAM_GUN_PARAMETER_ID,
     HEATED_ARM_PARAMETER_ID,
@@ -39,11 +39,11 @@ static void      update_adc_threshold(model_t *pmodel, int value);
 static void      update_hysteresis(model_t *pmodel, int value);
 static void      update_fan_config(model_t *pmodel, int value);
 static void      update_light_enabled(model_t *pmodel, int value);
-static void      update_height_regulation(model_t *pmodel, int value);
 static void      update_boiler_enabled(model_t *pmodel, int value);
 static void      update_second_iron_enabled(model_t *pmodel, int value);
 static void      update_steam_gun_enabled(model_t *pmodel, int value);
 static void      update_heated_arm_enabled(model_t *pmodel, int value);
+static void      update_board_temperature_control(model_t *pmodel, int value);
 
 
 static void *create_page(model_t *pmodel, void *extra) {
@@ -72,8 +72,8 @@ static void open_page(model_t *pmodel, void *args) {
     char string[32] = {0};
     btn_parameter_create(cont, "Luce", pmodel->configuration.light_enabled ? "Si" : "No", LIGHT_PARAMETER_ID);
 
-    btn_parameter_create(cont, "Regolazione altezza", pmodel->configuration.height_regulation ? "Si" : "No",
-                         HEIGHT_REGULATION_PARAMETER_ID);
+    btn_parameter_create(cont, "Temp. tavolo", pmodel->configuration.board_temperature_control ? "Si" : "No",
+                         BOARD_TEMPERATURE_CONTROL_PARAMETER_ID);
 
     btn_parameter_create(cont, "Secondo ferro", pmodel->configuration.second_iron_enabled ? "Si" : "No",
                          SECOND_IRON_PARAMETER_ID);
@@ -103,6 +103,8 @@ static void open_page(model_t *pmodel, void *args) {
 
 
 static view_message_t page_event(model_t *pmodel, void *args, view_event_t event) {
+    static number_parameter_metadata_t metadata = {0};
+
     view_message_t    msg   = VIEW_NULL_MESSAGE;
     struct page_data *pdata = args;
 
@@ -123,8 +125,6 @@ static view_message_t page_event(model_t *pmodel, void *args, view_event_t event
 
                     switch (event.data.id) {
                         case LIGHT_PARAMETER_ID: {
-                            static number_parameter_metadata_t metadata = {0};
-
                             metadata.initial_value = pmodel->configuration.light_enabled;
                             metadata.min           = 0;
                             metadata.max           = 1;
@@ -139,26 +139,7 @@ static view_message_t page_event(model_t *pmodel, void *args, view_event_t event
                             break;
                         }
 
-                        case HEIGHT_REGULATION_PARAMETER_ID: {
-                            static number_parameter_metadata_t metadata = {0};
-
-                            metadata.initial_value = pmodel->configuration.height_regulation;
-                            metadata.min           = 0;
-                            metadata.max           = 1;
-                            metadata.step          = 0;
-                            metadata.name          = "Regolazione altezza";
-                            metadata.to_string     = NULL;
-                            metadata.update        = update_height_regulation;
-
-                            msg.vmsg.code  = VIEW_PAGE_MESSAGE_CODE_CHANGE_PAGE_EXTRA;
-                            msg.vmsg.page  = &page_number_parameter;
-                            msg.vmsg.extra = &metadata;
-                            break;
-                        }
-
                         case SECOND_IRON_PARAMETER_ID: {
-                            static number_parameter_metadata_t metadata = {0};
-
                             pdata->scroll_position = lv_obj_get_scroll_y(pdata->page);
 
                             metadata.initial_value = pmodel->configuration.second_iron_enabled;
@@ -176,8 +157,6 @@ static view_message_t page_event(model_t *pmodel, void *args, view_event_t event
                         }
 
                         case STEAM_GUN_PARAMETER_ID: {
-                            static number_parameter_metadata_t metadata = {0};
-
                             metadata.initial_value = pmodel->configuration.steam_gun_enabled;
                             metadata.min           = 0;
                             metadata.max           = 1;
@@ -193,8 +172,6 @@ static view_message_t page_event(model_t *pmodel, void *args, view_event_t event
                         }
 
                         case HEATED_ARM_PARAMETER_ID: {
-                            static number_parameter_metadata_t metadata = {0};
-
                             metadata.initial_value = pmodel->configuration.heated_arm_enabled;
                             metadata.min           = 0;
                             metadata.max           = 1;
@@ -210,8 +187,6 @@ static view_message_t page_event(model_t *pmodel, void *args, view_event_t event
                         }
 
                         case BOILER_PARAMETER_ID: {
-                            static number_parameter_metadata_t metadata = {0};
-
                             metadata.initial_value = pmodel->configuration.boiler_enabled;
                             metadata.min           = 0;
                             metadata.max           = 1;
@@ -227,8 +202,6 @@ static view_message_t page_event(model_t *pmodel, void *args, view_event_t event
                         }
 
                         case ADC_PARAMETER_ID: {
-                            static number_parameter_metadata_t metadata = {0};
-
                             metadata.initial_value = model_get_boiler_adc_threshold(pmodel);
                             metadata.min           = 0;
                             metadata.max           = 4000;
@@ -243,9 +216,23 @@ static view_message_t page_event(model_t *pmodel, void *args, view_event_t event
                             break;
                         }
 
-                        case HYSTERESIS_PARAMETER_ID: {
-                            static number_parameter_metadata_t metadata = {0};
+                        case BOARD_TEMPERATURE_CONTROL_PARAMETER_ID: {
+                            metadata.initial_value = pmodel->configuration.board_temperature_control;
+                            metadata.min           = 0;
+                            metadata.max           = 1;
+                            metadata.step          = 0;
+                            metadata.name          = "Controllo temperatura tavolo";
+                            metadata.to_string     = NULL;
+                            metadata.update        = update_board_temperature_control;
 
+                            msg.vmsg.code  = VIEW_PAGE_MESSAGE_CODE_CHANGE_PAGE_EXTRA;
+                            msg.vmsg.page  = &page_number_parameter;
+                            msg.vmsg.extra = &metadata;
+                            break;
+                        }
+
+
+                        case HYSTERESIS_PARAMETER_ID: {
                             metadata.initial_value = model_get_boiler_adc_threshold(pmodel);
                             metadata.min           = 0;
                             metadata.max           = 300;
@@ -261,8 +248,6 @@ static view_message_t page_event(model_t *pmodel, void *args, view_event_t event
                         }
 
                         case FAN_PARAMETER_ID: {
-                            static number_parameter_metadata_t metadata = {0};
-
                             metadata.initial_value = pmodel->configuration.fan_config;
                             metadata.min           = FAN_CONFIG_SWITCH;
                             metadata.max           = FAN_CONFIG_SUCTION_ONLY;
@@ -351,11 +336,6 @@ static void fan_to_string(char *string, size_t len, int value) {
 }
 
 
-static void update_height_regulation(model_t *pmodel, int value) {
-    pmodel->configuration.height_regulation = value;
-}
-
-
 static void update_light_enabled(model_t *pmodel, int value) {
     pmodel->configuration.light_enabled = value;
 }
@@ -383,6 +363,11 @@ static void update_boiler_enabled(model_t *pmodel, int value) {
 
 static void update_adc_threshold(model_t *pmodel, int value) {
     model_set_boiler_adc_threshold(pmodel, value);
+}
+
+
+static void update_board_temperature_control(model_t *pmodel, int value) {
+    pmodel->configuration.board_temperature_control = value;
 }
 
 

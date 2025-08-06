@@ -55,10 +55,18 @@ void model_init(model_t *pmodel) {
     pmodel->configuration.boiler_adc_threshold           = 2000;
     pmodel->configuration.isteresi_caldaia               = 15;
     pmodel->configuration.fan_config                     = FAN_CONFIG_SWITCH;
-    pmodel->configuration.height_regulation              = 0;
-    pmodel->configuration.height_regulation_presets[0]              = 0;
-    pmodel->configuration.height_regulation_presets[1]              = 50;
-    pmodel->configuration.height_regulation_presets[2]              = 100;
+
+    pmodel->configuration.height_regulation = 0;
+
+    pmodel->configuration.user_height_presets[0] = 0;
+    pmodel->configuration.user_height_presets[1] = 33;
+    pmodel->configuration.user_height_presets[2] = 66;
+    pmodel->configuration.user_height_presets[3] = 100;
+
+    pmodel->configuration.shape_height_presets[0] = 0;
+    pmodel->configuration.shape_height_presets[1] = 33;
+    pmodel->configuration.shape_height_presets[2] = 66;
+    pmodel->configuration.shape_height_presets[3] = 100;
 
     pmodel->configuration.percentuali_soffio[0] = 40;
     pmodel->configuration.percentuali_soffio[1] = 45;
@@ -281,13 +289,15 @@ void model_set_blow_trap(model_t *model, uint8_t value) {
 
 uint8_t model_should_activate_table(model_t *pmodel) {
     assert(pmodel != NULL);
-    // FIXME: pezza fiera
-    return model_get_richiesta_temperatura_tavolo(pmodel);
-    if (model_get_richiesta_temperatura_tavolo(pmodel)) {
-        return (model_get_temperatura_tavolo(pmodel) + model_get_isteresi_tavolo(pmodel) <
-                model_get_setpoint_temperatura_tavolo(pmodel));
+    if (pmodel->configuration.board_temperature_control) {
+        if (model_get_richiesta_temperatura_tavolo(pmodel)) {
+            return (model_get_temperatura_tavolo(pmodel) + model_get_isteresi_tavolo(pmodel) <
+                    model_get_setpoint_temperatura_tavolo(pmodel));
+        } else {
+            return 0;
+        }
     } else {
-        return 0;
+        return model_get_richiesta_temperatura_tavolo(pmodel);
     }
 }
 
@@ -413,4 +423,21 @@ int16_t model_get_temperatura_bracciolo(model_t *pmodel) {
 uint16_t model_get_adc_ptc(model_t *pmodel, ptc_t ptc) {
     assert(pmodel != NULL);
     return pmodel->minion.ptc_adcs[ptc];
+}
+
+
+uint16_t model_get_required_height(model_t *model) {
+    assert(model != NULL);
+
+    if (model->configuration.height_regulation) {
+        if (model_digin_read(model, DIGIN_FIRST_SHAPE)) {
+            return model->configuration.shape_height_presets[0];
+        } else if (model_digin_read(model, DIGIN_SECOND_SHAPE)) {
+            return model->configuration.shape_height_presets[1];
+        } else {
+            return model->configuration.user_height_presets[model->configuration.selected_user_height_preset];
+        }
+    } else {
+        return 0;
+    }
 }

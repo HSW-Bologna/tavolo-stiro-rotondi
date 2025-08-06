@@ -1,3 +1,4 @@
+#include <stdbool.h>
 #include <assert.h>
 #include "gel/timer/timecheck.h"
 #include "freertos/FreeRTOS.h"
@@ -13,6 +14,7 @@
 
 #define MODBUS_RESPONSE_03_LEN(data_len) (5 + data_len * 2)
 #define MODBUS_RESPONSE_05_LEN           8
+#define MODBUS_RESPONSE_06_LEN           8
 #define MINION_MESSAGE_QUEUE_SIZE        32
 #define MINION_TIMEOUT                   40
 #define MODBUS_MAX_PACKET_SIZE           256
@@ -26,6 +28,9 @@
 
 #define HEIGHT_REGULATOR_ADDR 247
 #define MINION_ADDR           1
+#define ADJUSTABLE_LEGS_ADDR  247
+
+#define ADJUSTABLE_LEGS_HR_BAUD_RATE 0x1115
 
 
 typedef enum {
@@ -48,6 +53,7 @@ struct __attribute__((packed)) task_message {
 
 
 typedef struct {
+    uint16_t exception;
     uint16_t start;
     void    *pointer;
 } master_context_t;
@@ -57,12 +63,15 @@ static void        minion_task(void *args);
 static ModbusError exception_callback(const ModbusMaster *master, uint8_t address, uint8_t function,
                                       ModbusExceptionCode code);
 static ModbusError data_callback(const ModbusMaster *master, const ModbusDataCallbackArgs *args);
-static int write_holding_registers(ModbusMaster *master, uint8_t address, uint16_t starting_address, uint16_t *data,
-                                   size_t num);
-static int read_holding_registers(ModbusMaster *master, uint16_t *registers, uint8_t address, uint16_t start,
-                                  uint16_t count);
-static int read_input_registers(ModbusMaster *master, uint16_t *registers, uint8_t address, uint16_t start,
-                                uint16_t count);
+static int  write_holding_registers(ModbusMaster *master, uint8_t address, uint16_t starting_address, uint16_t *data,
+                                    size_t num);
+static int  read_holding_registers(ModbusMaster *master, uint16_t *registers, uint8_t address, uint16_t start,
+                                   uint16_t count);
+static int  write_holding_register(ModbusMaster *master, uint8_t address, uint16_t register_address, uint16_t data);
+static int  read_input_registers(ModbusMaster *master, uint16_t *registers, uint8_t address, uint16_t start,
+                                 uint16_t count);
+static void machine_manage(ModbusMaster *master);
+static void adjustable_legs_manage(ModbusMaster *master);
 
 
 static const char *TAG = "Modbus";
@@ -71,7 +80,7 @@ static struct {
     QueueHandle_t     messageq;
     QueueHandle_t     responseq;
 
-    uint8_t communication_error;
+    uint8_t legs_communication_error;
     uint8_t enabled;
     uint8_t new;
     uint16_t position;
@@ -131,7 +140,7 @@ void minion_height_regulator_update(uint8_t enabled, uint16_t position) {
     xSemaphoreTake(state.sem, portMAX_DELAY);
     state.new      = 1;
     state.enabled  = enabled;
-    state.position = (position * 65534) / 100;
+    state.position = position;
     xSemaphoreGive(state.sem);
 }
 
@@ -149,88 +158,143 @@ static void minion_task(void *args) {
 
     // Check for errors
     assert(modbusIsOk(err) && "modbusMasterInit() failed");
-    struct task_message message = {0};
-    unsigned long       ts      = 0;
 
     ESP_LOGI(TAG, "Task starting");
 
     for (;;) {
-        {
-            uint8_t new;
-            uint8_t  enabled;
-            uint16_t position;
-            xSemaphoreTake(state.sem, portMAX_DELAY);
-            new       = state.new;
-            enabled   = state.enabled;
-            position  = state.position;
-            state.new = 0;
-            xSemaphoreGive(state.sem);
-            if (enabled && new &&is_expired(ts, get_millis(), 200)) {
-                uint16_t values[3]        = {position, position, 0x000E};
-                state.communication_error = write_holding_registers(&master, HEIGHT_REGULATOR_ADDR, 0x1000, values,
-                                                                    sizeof(values) / sizeof(values[0]));
-                ts                        = get_millis();
-            }
-        }
-
-        if (xQueueReceive(state.messageq, &message, pdMS_TO_TICKS(100))) {
-            switch (message.tag) {
-                case TASK_MESSAGE_TAG_READ_STATE: {
-                    minion_response_t response  = {.tag = MINION_RESPONSE_TAG_READ_STATE, .error = 0};
-                    uint16_t          values[7] = {};
-                    if (read_input_registers(&master, values, MINION_ADDR, INPUT_REGISTER_INPUTS,
-                                             sizeof(values) / sizeof(values[0]))) {
-                        response.error = 1;
-                    } else {
-                        response.as.state.inputs_map          = values[0];
-                        response.as.state.liquid_levels[0]    = values[1];
-                        response.as.state.liquid_levels[1]    = values[2];
-                        response.as.state.ptc_adcs[0]         = values[3];
-                        response.as.state.ptc_adcs[1]         = values[4];
-                        response.as.state.ptc_temperatures[0] = values[5];
-                        response.as.state.ptc_temperatures[1] = values[6];
-                    }
-                    xQueueSend(state.responseq, &response, portMAX_DELAY);
-                    break;
-                }
-                case TASK_MESSAGE_TAG_WRITE_OUTPUTS: {
-                    minion_response_t response  = {.tag = MINION_RESPONSE_TAG_OK, .error = 0};
-                    uint16_t          values[2] = {
-                        message.as.outputs.relays,
-                        message.as.outputs.percentage_suction | (message.as.outputs.percentage_blow << 8),
-                    };
-
-                    ESP_LOGI(TAG, "Relays %X", message.as.outputs.relays);
-
-                    if (write_holding_registers(&master, MINION_ADDR, HOLDING_REGISTER_RELAYS, values,
-                                                sizeof(values) / sizeof(values[0]))) {
-                        response.error = 1;
-                    }
-                    xQueueSend(state.responseq, &response, portMAX_DELAY);
-                    break;
-                }
-
-                case TASK_MESSAGE_TAG_READ_FW_VERSION: {
-                    minion_response_t response = {.tag = MINION_RESPONSE_TAG_FIRMWARE_VERSION, .error = 0};
-
-                    uint16_t values[2] = {0};
-                    if (read_input_registers(&master, values, MINION_ADDR, INPUT_REGISTER_FIRMWARE_VERSION, 2)) {
-                        response.error = 1;
-                    } else {
-                        response.as.firmware_version.version_major = (values[0] >> 8) & 0xFF;
-                        response.as.firmware_version.version_minor = values[0] & 0xFF;
-                        response.as.firmware_version.version_patch = values[1] & 0xFF;
-                    }
-
-                    xQueueSend(state.responseq, &response, portMAX_DELAY);
-                    break;
-                }
-            }
-            vTaskDelay(pdMS_TO_TICKS(MINION_TIMEOUT / 2));
-        }
+        adjustable_legs_manage(&master);
+        machine_manage(&master);
     }
 
     vTaskDelete(NULL);
+}
+
+
+static void machine_manage(ModbusMaster *master) {
+    struct task_message message = {0};
+
+    if (xQueueReceive(state.messageq, &message, pdMS_TO_TICKS(10))) {
+        switch (message.tag) {
+            case TASK_MESSAGE_TAG_READ_STATE: {
+                minion_response_t response  = {.tag = MINION_RESPONSE_TAG_READ_STATE};
+                uint16_t          values[7] = {};
+                if (read_input_registers(master, values, MINION_ADDR, INPUT_REGISTER_INPUTS,
+                                         sizeof(values) / sizeof(values[0]))) {
+                    response.tag = MINION_RESPONSE_TAG_ERROR;
+                } else {
+                    response.as.state.inputs_map          = values[0];
+                    response.as.state.liquid_levels[0]    = values[1];
+                    response.as.state.liquid_levels[1]    = values[2];
+                    response.as.state.ptc_adcs[0]         = values[3];
+                    response.as.state.ptc_adcs[1]         = values[4];
+                    response.as.state.ptc_temperatures[0] = values[5];
+                    response.as.state.ptc_temperatures[1] = values[6];
+                }
+                xQueueSend(state.responseq, &response, portMAX_DELAY);
+                break;
+            }
+            case TASK_MESSAGE_TAG_WRITE_OUTPUTS: {
+                uint16_t values[2] = {
+                    message.as.outputs.relays,
+                    message.as.outputs.percentage_suction | (message.as.outputs.percentage_blow << 8),
+                };
+
+                if (write_holding_registers(master, MINION_ADDR, HOLDING_REGISTER_RELAYS, values,
+                                            sizeof(values) / sizeof(values[0]))) {
+                    minion_response_t response = {.tag = MINION_RESPONSE_TAG_ERROR};
+                    xQueueSend(state.responseq, &response, portMAX_DELAY);
+                }
+                break;
+            }
+
+            case TASK_MESSAGE_TAG_READ_FW_VERSION: {
+                minion_response_t response = {.tag = MINION_RESPONSE_TAG_FIRMWARE_VERSION};
+
+                uint16_t values[2] = {0};
+                if (read_input_registers(master, values, MINION_ADDR, INPUT_REGISTER_FIRMWARE_VERSION, 2)) {
+                    response = (minion_response_t){.tag = MINION_RESPONSE_TAG_ERROR};
+                } else {
+                    response.as.firmware_version.version_major = (values[0] >> 8) & 0xFF;
+                    response.as.firmware_version.version_minor = values[0] & 0xFF;
+                    response.as.firmware_version.version_patch = values[1] & 0xFF;
+                }
+
+                xQueueSend(state.responseq, &response, portMAX_DELAY);
+                break;
+            }
+        }
+        vTaskDelay(pdMS_TO_TICKS(MINION_TIMEOUT / 2));
+    }
+}
+
+
+static void adjustable_legs_manage(ModbusMaster *master) {
+    static unsigned long ts                 = 0;
+    static unsigned long legs_config_ts     = 0;
+    static bool          legs_first_attempt = true;
+
+    xSemaphoreTake(state.sem, portMAX_DELAY);
+    uint8_t new       = state.new;
+    uint8_t  enabled  = state.enabled;
+    uint16_t position = state.position;
+    xSemaphoreGive(state.sem);
+    if (enabled) {
+        if (new &&is_expired(ts, get_millis(), 100)) {
+            if (write_holding_register(master, HEIGHT_REGULATOR_ADDR, 0x1002, 0x0000)) {
+                state.legs_communication_error = 1;
+            } else {
+                vTaskDelay(pdMS_TO_TICKS(20));
+                if (write_holding_register(master, HEIGHT_REGULATOR_ADDR, 0x1000, position)) {
+                    state.legs_communication_error = 1;
+                } else {
+                    vTaskDelay(pdMS_TO_TICKS(10));
+                    if (write_holding_register(master, HEIGHT_REGULATOR_ADDR, 0x1002, 0x000E)) {
+                        state.legs_communication_error = 1;
+                    } else {
+                        state.legs_communication_error = 0;
+                    }
+                }
+            }
+
+            if (state.legs_communication_error) {
+                ESP_LOGW(TAG, "Failed to setup adjustable height");
+                minion_response_t response = {
+                    .tag    = MINION_RESPONSE_TAG_ERROR,
+                    .minion = MINION_ADJUSTABLE_LEGS,
+                };
+                xQueueSend(state.responseq, &response, portMAX_DELAY);
+            } else {
+                ESP_LOGI(TAG, "Height adjusted successfully to %i!", position);
+                xSemaphoreTake(state.sem, portMAX_DELAY);
+                state.new = 0;     // Clear the position request, otherwise try again
+                xSemaphoreGive(state.sem);
+            }
+
+            ts = get_millis();
+        }
+
+        if (state.legs_communication_error && (legs_first_attempt || is_expired(legs_config_ts, get_millis(), 10000))) {
+
+            rs485_set_baudrate(9600);
+            uint16_t baudrate = 3;
+
+            if (write_holding_registers(master, ADJUSTABLE_LEGS_ADDR, ADJUSTABLE_LEGS_HR_BAUD_RATE, &baudrate, 1)) {
+                ESP_LOGW(TAG, "Failed to setup baudrate for adjustable legs");
+                minion_response_t response = {
+                    .tag    = MINION_RESPONSE_TAG_ERROR,
+                    .minion = MINION_ADJUSTABLE_LEGS,
+                };
+                xQueueSend(state.responseq, &response, portMAX_DELAY);
+            } else {
+                ESP_LOGI(TAG, "Baudrate for adjustable legs setup");
+                state.legs_communication_error = 0;
+            }
+            rs485_set_baudrate(115200);
+
+            legs_first_attempt = false;
+            legs_config_ts     = get_millis();
+        }
+    }
 }
 
 
@@ -271,10 +335,55 @@ static ModbusError data_callback(const ModbusMaster *master, const ModbusDataCal
 
 static ModbusError exception_callback(const ModbusMaster *master, uint8_t address, uint8_t function,
                                       ModbusExceptionCode code) {
+    master_context_t *ctx = modbusMasterGetUserPointer(master);
+    if (ctx) {
+        ctx->exception = code;
+    }
     ESP_LOGI(TAG, "Received exception (function %d) from slave %d code %d", function, address, code);
 
     return MODBUS_OK;
 }
+
+
+static int write_holding_register(ModbusMaster *master, uint8_t address, uint16_t register_address, uint16_t data) {
+    uint8_t buffer[MODBUS_MAX_PACKET_SIZE] = {0};
+    int     res                            = 0;
+    size_t  counter                        = 0;
+
+    rs485_flush();
+
+    master_context_t ctx = {};
+    modbusMasterSetUserPointer(master, &ctx);
+
+    do {
+        ctx.exception = 0;
+        res           = 0;
+
+        ModbusErrorInfo err = modbusBuildRequest06RTU(master, address, register_address, data);
+        assert(modbusIsOk(err));
+        rs485_write((uint8_t *)modbusMasterGetRequest(master), modbusMasterGetRequestLength(master));
+
+        int len = rs485_read(buffer, MODBUS_RESPONSE_06_LEN, pdMS_TO_TICKS(MINION_TIMEOUT));
+        err     = modbusParseResponseRTU(master, modbusMasterGetRequest(master), modbusMasterGetRequestLength(master),
+                                         buffer, len);
+
+        if (!modbusIsOk(err) || ctx.exception != MODBUS_EXCEP_NONE) {
+            ESP_LOGW(TAG, "Write holding register for %i error (%i): %i %i %i", address, len, err.source, err.error,
+                     ctx.exception);
+            res = -1;
+            vTaskDelay(pdMS_TO_TICKS(MINION_TIMEOUT));
+        }
+    } while (res && ++counter < MINION_COMMUNICATION_ATTEMPTS);
+
+    if (res) {
+        ESP_LOGW(TAG, "ERROR!");
+    } else {
+        ESP_LOGD(TAG, "Success");
+    }
+
+    return res;
+}
+
 
 
 static int write_holding_registers(ModbusMaster *master, uint8_t address, uint16_t starting_address, uint16_t *data,

@@ -14,7 +14,7 @@
 #include "boiler_control.h"
 
 
-#define NUM_WATCHED_VARIABLES 12
+#define NUM_WATCHED_VARIABLES 11
 
 
 static void    refresh_light(void *mem, void *arg);
@@ -63,7 +63,9 @@ static uint16_t  variables_output[2]                          = {0};
 static uint8_t   light_state                                  = 0;
 static uint8_t   second_iron_state                            = 0;
 static uint8_t   gun_state                                    = 0;
-static uint8_t   update_height_regulation                     = 0;
+static struct {
+    uint16_t required_height;
+} state;
 
 
 void controller_init(model_t *pmodel) {
@@ -102,9 +104,9 @@ void controller_init(model_t *pmodel) {
     watched_variables[i++] = WATCHER(&pmodel->minion.inputs, refresh_ventole, pmodel);
     watched_variables[i++] = WATCHER(&pmodel->configuration.boiler_enabled, refresh_boiler, pmodel);
     watched_variables[i++] = WATCHER(&pmodel->configuration.height_regulation, refresh_height_regulation, pmodel);
-    watched_variables[i++] = WATCHER_ARRAY(pmodel->configuration.height_regulation_presets, HEIGHT_REGULATION_PRESETS,
-                                           refresh_height_regulation, pmodel);
-    watched_variables[i++] = WATCHER(&pmodel->configuration.selected_height_preset, refresh_height_regulation, pmodel);
+
+    watched_variables[i++] = WATCHER(&state.required_height, refresh_height_regulation, pmodel);
+
     watched_variables[i++] = WATCHER_ARRAY(variables_temperature, 6, refresh_temperature, pmodel);
     assert(i == NUM_WATCHED_VARIABLES);
     watched_variables[i] = WATCHER_NULL;
@@ -144,38 +146,44 @@ void controller_manage(model_t *pmodel) {
 
     minion_response_t response;
     if (minion_get_response(&response)) {
-        if (response.error) {
+        switch (response.tag) {
+            case MINION_RESPONSE_TAG_ERROR: {
 #ifndef SIMULATOR
-            model_set_alarm_communication(pmodel, 1);
-#endif
-            view_event((view_event_t){.code = VIEW_EVENT_CODE_UPDATE});
-        } else {
-            switch (response.tag) {
-                case MINION_RESPONSE_TAG_READ_STATE: {
-                    if (model_update_minion_state(pmodel, response.as.state.inputs_map, response.as.state.liquid_levels,
-                                                  response.as.state.ptc_adcs, response.as.state.ptc_temperatures)) {
-                        uint8_t vapore = model_digin_read(pmodel, DIGIN_VAP);
-                        if (vapore != old_vapore) {
-                            if (vapore) {
-                                view_event((view_event_t){.code = VIEW_EVENT_CODE_VAPORE});
-                            }
-                            old_vapore = vapore;
-                        }
-
-                        if (!model_is_in_test(pmodel)) {
-                            // model_set_relay(pmodel, DIGOUT_RECUPERATOR, model_digin_read(pmodel,
-                            // DIGIN_AIR_FLOW_SWITCH));
-                        }
-
-                        boiler_control_value_changed(pmodel);
-                        view_event((view_event_t){.code = VIEW_EVENT_CODE_UPDATE});
-                    }
-                    break;
+                ESP_LOGW(TAG, "Error on %i", response.minion);
+                if (response.minion == MINION_MACHINE) {
+                    model_set_alarm_communication(pmodel, 1);
+                } else {
+                    pmodel->run.alarm_communication_adjustable_legs = 1;
                 }
-
-                default:
-                    break;
+#endif
+                view_event((view_event_t){.code = VIEW_EVENT_CODE_UPDATE});
+                break;
             }
+
+            case MINION_RESPONSE_TAG_READ_STATE: {
+                if (model_update_minion_state(pmodel, response.as.state.inputs_map, response.as.state.liquid_levels,
+                                              response.as.state.ptc_adcs, response.as.state.ptc_temperatures)) {
+                    uint8_t vapore = model_digin_read(pmodel, DIGIN_VAP);
+                    if (vapore != old_vapore) {
+                        if (vapore) {
+                            view_event((view_event_t){.code = VIEW_EVENT_CODE_VAPORE});
+                        }
+                        old_vapore = vapore;
+                    }
+
+                    if (!model_is_in_test(pmodel)) {
+                        // model_set_relay(pmodel, DIGOUT_RECUPERATOR, model_digin_read(pmodel,
+                        // DIGIN_AIR_FLOW_SWITCH));
+                    }
+
+                    boiler_control_value_changed(pmodel);
+                    view_event((view_event_t){.code = VIEW_EVENT_CODE_UPDATE});
+                }
+                break;
+            }
+
+            default:
+                break;
         }
     }
 
@@ -200,12 +208,7 @@ void controller_manage(model_t *pmodel) {
         ts_5s = get_millis();
     }
 
-    if (update_height_regulation) {
-        minion_height_regulator_update(
-            pmodel->configuration.height_regulation,
-            pmodel->configuration.height_regulation_presets[pmodel->configuration.selected_height_preset]);
-        update_height_regulation = 0;
-    }
+    state.required_height = model_get_required_height(pmodel);
 
     boiler_control_manage_callbacks(pmodel);
     update_watched_variables(pmodel);
@@ -276,8 +279,9 @@ static void refresh_temperature(void *mem, void *arg) {
 
 static void refresh_height_regulation(void *mem, void *arg) {
     (void)mem;
-    (void)arg;
-    update_height_regulation = 1;
+
+    model_t *model = arg;
+    minion_height_regulator_update(model->configuration.height_regulation, model_get_required_height(model));
 }
 
 

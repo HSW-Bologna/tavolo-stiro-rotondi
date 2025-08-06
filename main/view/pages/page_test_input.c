@@ -25,7 +25,7 @@ static void page_update(model_t *pmodel, struct page_data *pdata);
 
 
 static const char *descriptions[NUM_INPUTS] = {
-    "Aspirazione", "Soffio", "Scambio tavolo/bracciolo", "IN4", "Vapore",
+    "IN 1", "IN 2", "IN 3", "IN 4", "Vapore",
 };
 
 

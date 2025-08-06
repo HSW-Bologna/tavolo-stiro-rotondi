@@ -49,6 +49,11 @@ void rs485_init(void) {
 }
 
 
+void rs485_set_baudrate(uint32_t baudrate) {
+    uart_set_baudrate(PORTNUM, baudrate);
+}
+
+
 void rs485_wait_tx_done(void) {
     uart_wait_tx_done(PORTNUM, portMAX_DELAY);
 }

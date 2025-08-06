@@ -12,6 +12,7 @@ int  rs485_read(uint8_t *buffer, size_t len, unsigned long timeout_ms);
 void rs485_flush(void);
 void rs485_flush_input(void);
 void rs485_wait_tx_done(void);
+void rs485_set_baudrate(uint32_t baudrate);
 
 
 #endif

@@ -30,7 +30,11 @@ void fan_control(model_t *pmodel) {
 
     uint8_t suction_pedal = model_digin_read(pmodel, DIGIN_SUCTION_PEDAL);
     uint8_t blowing_pedal = model_digin_read(pmodel, DIGIN_BLOWING_PEDAL);
-    uint8_t switch_pedal  = model_digin_read(pmodel, DIGIN_AIR_FLOW_SWITCH);
+    uint8_t switch_pedal  = 0;
+
+    if (!pmodel->configuration.height_regulation) {
+        switch_pedal = model_digin_read(pmodel, DIGIN_AIR_FLOW_SWITCH);
+    }
 
     if (!model_is_in_test(pmodel)) {
         model_set_suction_trap(pmodel, switch_pedal);

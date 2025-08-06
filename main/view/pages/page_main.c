@@ -46,6 +46,8 @@ LV_IMG_DECLARE(img_ventola);
 LV_IMG_DECLARE(img_bolle_2);
 LV_IMG_DECLARE(img_bolle_3);
 LV_IMG_DECLARE(img_power);
+LV_IMG_DECLARE(img_height_regulation);
+
 
 #define ANIM_VAPORE_PERIOD 1200
 #define POPUP_WIDTH        360
@@ -107,9 +109,7 @@ struct page_data {
     lv_obj_t *btn_steam_gun;
     lv_obj_t *btn_luce;
     lv_obj_t *btn_menu;
-    lv_obj_t *btn_height_regulations[HEIGHT_REGULATION_PRESETS];
-
-    lv_obj_t *cont_height_regulation;
+    lv_obj_t *btn_height_regulation;
 
     lv_obj_t *img_ventola_aspirazione;
     lv_obj_t *img_ventola_soffio;
@@ -130,8 +130,10 @@ struct page_data {
 
     lv_obj_t *popup_tavolo;
     lv_obj_t *arc_setpoint_tavolo;
+
     lv_obj_t *lbl_setpoint_tavolo;
     lv_obj_t *lbl_setpoint_tavolo_main;
+    lv_obj_t *lbl_height_regulation;
 
     lv_obj_t *popup_bracciolo;
     lv_obj_t *arc_setpoint_bracciolo;
@@ -180,7 +182,6 @@ static lv_obj_t *heat_image_button(lv_obj_t *root, const lv_img_dsc_t *img_dsc, 
 static lv_obj_t *iron_image_button(lv_obj_t *root, const lv_img_dsc_t *img_dsc, size_t col, size_t row, int id);
 static lv_anim_t fan_animation(lv_obj_t *img, uint32_t period);
 static lv_anim_t slide_in_animation(lv_obj_t *obj, int32_t start, int32_t end);
-static lv_anim_t fade_animation(lv_obj_t *obj);
 static void      update_page(model_t *pmodel, struct page_data *pdata, uint8_t restart_animations);
 static lv_obj_t *popup_temperature_create(lv_obj_t *root, lv_obj_t **arc, lv_obj_t **lbl, lv_obj_t **img,
                                           const lv_img_dsc_t *img_dsc, int plus_id, int minus_id);
@@ -321,37 +322,20 @@ static void open_page(model_t *pmodel, void *args) {
     pdata->btn_steam_gun = view_common_image_button_create(cont, &img_fotocellula_sx, STEAM_GUN_BTN_ID);
 
     {     // Regolazione altezza
-        lv_obj_t *obj = lv_obj_create(cont);
-        lv_obj_add_style(obj, (lv_style_t *)&style_transparent_cont, LV_STATE_DEFAULT);
-        lv_obj_set_style_pad_ver(obj, 4, LV_STATE_DEFAULT);
-        lv_obj_set_size(obj, COL_SIZE - 4, ROW_SIZE - 4);
-        lv_obj_set_layout(obj, LV_LAYOUT_FLEX);
-        lv_obj_set_flex_flow(obj, LV_FLEX_FLOW_COLUMN_REVERSE);
-        lv_obj_set_flex_align(obj, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+        lv_obj_t *btn = view_common_base_button_create(cont, HEIGHT_REGULATION_BTN_ID);
 
-        for (size_t i = 0; i < HEIGHT_REGULATION_PRESETS; i++) {
-            lv_obj_t *btn = lv_btn_create(obj);
-            lv_obj_add_style(btn, (lv_style_t *)&style_black_border, LV_STATE_DEFAULT);
-            lv_obj_add_style(btn, (lv_style_t *)&style_btn_checked, LV_STATE_CHECKED);
-            view_register_object_default_callback_with_number(btn, HEIGHT_REGULATION_BTN_ID, i);
-            lv_obj_set_width(btn, COL_SIZE - 8);
-            lv_obj_set_flex_grow(btn, 1);
-            pdata->btn_height_regulations[i] = btn;
+        lv_obj_t *img = lv_img_create(btn);
+        lv_obj_set_style_img_recolor_opa(img, LV_OPA_COVER, LV_STATE_DEFAULT);
+        lv_obj_set_style_img_recolor(img, lv_color_black(), LV_STATE_DEFAULT);
+        lv_img_set_src(img, &img_height_regulation);
+        lv_obj_align(img, LV_ALIGN_TOP_MID, 0, 8);
 
-            lv_obj_t *label = lv_label_create(btn);
-            lv_obj_align(label, LV_ALIGN_CENTER, 0, 0);
-            lv_obj_set_style_text_font(label, STYLE_FONT_MEDIUM, LV_STATE_DEFAULT);
+        lv_obj_t *label = lv_label_create(btn);
+        lv_obj_align(label, LV_ALIGN_BOTTOM_MID, 0, 0);
+        lv_obj_set_style_text_font(label, STYLE_FONT_BIG, LV_STATE_DEFAULT);
+        pdata->lbl_height_regulation = label;
 
-            if (i == 0) {
-                lv_label_set_text(label, LV_SYMBOL_UP);
-            } else if (i == 1) {
-                lv_label_set_text(label, LV_SYMBOL_UP LV_SYMBOL_UP);
-            } else {
-                lv_label_set_text(label, LV_SYMBOL_UP LV_SYMBOL_UP LV_SYMBOL_UP);
-            }
-        }
-
-        pdata->cont_height_regulation = obj;
+        pdata->btn_height_regulation = btn;
     }
 
     // Bottone Luce
@@ -483,6 +467,7 @@ static view_message_t page_event(model_t *pmodel, void *args, view_event_t event
                     switch (event.data.id) {
                         case BTN_DISMISS_ALARM_ID:
                             model_set_alarm_communication(pmodel, 0);
+                            pmodel->run.alarm_communication_adjustable_legs = 0;
                             update_page(pmodel, pdata, 0);
                             break;
 
@@ -602,7 +587,9 @@ static view_message_t page_event(model_t *pmodel, void *args, view_event_t event
                             break;
 
                         case HEIGHT_REGULATION_BTN_ID:
-                            pmodel->configuration.selected_height_preset = event.data.number;
+                            pmodel->configuration.selected_user_height_preset =
+                                (pmodel->configuration.selected_user_height_preset + 1) %
+                                USER_HEIGHT_REGULATION_PRESETS;
                             update_page(pmodel, pdata, 1);
                             break;
                     }
@@ -613,7 +600,7 @@ static view_message_t page_event(model_t *pmodel, void *args, view_event_t event
                 case LV_EVENT_LONG_PRESSED: {
                     switch (event.data.id) {
                         case TAVOLO_BTN_ID:
-                            if (pdata->editing_target == EDITING_TARGET_NONE) {
+                            if (pdata->editing_target == EDITING_TARGET_NONE && pmodel->configuration.board_temperature_control) {
                                 pdata->editing_target = EDITING_TARGET_TEMPERATURA_TAVOLO;
                                 lv_anim_start(&pdata->anim_popup_tavolo);
                                 update_page(pmodel, pdata, 0);
@@ -638,11 +625,6 @@ static view_message_t page_event(model_t *pmodel, void *args, view_event_t event
                             pmodel->run.machine_state = MACHINE_STATE_STANDBY;
                             msg.vmsg.code             = VIEW_PAGE_MESSAGE_CODE_CHANGE_PAGE;
                             msg.vmsg.page             = &page_standby;
-                            break;
-
-                        case HEIGHT_REGULATION_BTN_ID:
-                            msg.vmsg.code = VIEW_PAGE_MESSAGE_CODE_CHANGE_PAGE;
-                            msg.vmsg.page = &page_height_presets;
                             break;
                     }
                     break;
@@ -786,11 +768,9 @@ static void update_page(model_t *pmodel, struct page_data *pdata, uint8_t restar
     view_common_set_hidden(pdata->btn_bracciolo, !pmodel->configuration.heated_arm_enabled);
     view_common_set_hidden(pdata->btn_steam_gun, !pmodel->configuration.steam_gun_enabled);
     view_common_set_hidden(pdata->btn_boiler, !pmodel->configuration.boiler_enabled);
-    view_common_set_hidden(pdata->cont_height_regulation, !pmodel->configuration.height_regulation);
+    view_common_set_hidden(pdata->btn_height_regulation, !pmodel->configuration.height_regulation);
 
-    for (size_t i = 0; i < HEIGHT_REGULATION_PRESETS; i++) {
-        view_common_set_checked(pdata->btn_height_regulations[i], i == pmodel->configuration.selected_height_preset);
-    }
+    lv_label_set_text_fmt(pdata->lbl_height_regulation, "%i", pmodel->configuration.selected_user_height_preset + 1);
 
     if (model_get_soffio_on(pmodel)) {
         lv_anim_set_time(&pdata->anim_ventola_soffio, speed_to_period_transform[model_get_velocita_soffio(pmodel)]);
@@ -879,8 +859,13 @@ static void update_page(model_t *pmodel, struct page_data *pdata, uint8_t restar
                                     model_get_gun_state(pmodel) ? &img_steam_brush_on : &img_steam_brush_off);
             view_common_set_checked(pdata->btn_steam_gun, model_get_gun_state(pmodel));
 
-            lv_label_set_text_fmt(pdata->lbl_setpoint_tavolo_main, "%i °C",
-                                  model_get_setpoint_temperatura_tavolo(pmodel));
+            if (pmodel->configuration.board_temperature_control) {
+                lv_label_set_text_fmt(pdata->lbl_setpoint_tavolo_main, "%i °C",
+                                      model_get_setpoint_temperatura_tavolo(pmodel));
+                view_common_set_hidden(pdata->lbl_setpoint_tavolo_main, 0);
+            } else {
+                view_common_set_hidden(pdata->lbl_setpoint_tavolo_main, 1);
+            }
             break;
 
         case EDITING_TARGET_TEMPERATURA_BRACCIOLO:
@@ -938,8 +923,13 @@ static void update_page(model_t *pmodel, struct page_data *pdata, uint8_t restar
     }
 
 
-    view_common_set_hidden(pdata->popup_alarm, !model_get_alarm_communication(pmodel));
-    lv_label_set_text(pdata->lbl_alarm, "Allarme comunicazione!");
+    view_common_set_hidden(pdata->popup_alarm,
+                           !pmodel->run.alarm_communication && !pmodel->run.alarm_communication_adjustable_legs);
+    if (pmodel->run.alarm_communication_adjustable_legs) {
+        lv_label_set_text(pdata->lbl_alarm, "Errore nella regolazione dell'altezza!");
+    } else {
+        lv_label_set_text(pdata->lbl_alarm, "Allarme comunicazione!");
+    }
 }
 
 
@@ -1240,32 +1230,6 @@ static lv_anim_t slide_in_animation(lv_obj_t *obj, int32_t start, int32_t end) {
 }
 
 
-static void fade_cb(lv_obj_t *obj, int32_t transp) {
-    lv_obj_set_style_opa(obj, transp, LV_STATE_DEFAULT);
-}
-
-
-static lv_anim_t fade_animation(lv_obj_t *obj) {
-    lv_anim_t a;
-    lv_anim_init(&a);
-    /*Set the "animator" function*/
-    lv_anim_set_exec_cb(&a, (lv_anim_exec_xcb_t)fade_cb);
-    /* Ease out animation */
-    lv_anim_set_path_cb(&a, lv_anim_path_ease_out);
-    /*Set target of the animation*/
-    lv_anim_set_var(&a, obj);
-    /*Length of the animation [ms]*/
-    lv_anim_set_time(&a, 1200);
-    /*Set start and end values. E.g. 0, 150*/
-    lv_anim_set_values(&a, LV_OPA_MAX, LV_OPA_MIN);
-    /* OPTIONAL SETTINGS
-     *------------------*/
-    /*Number of repetitions. Default is 1. LV_ANIM_REPEAT_INFINITE for infinite repetition*/
-    lv_anim_set_repeat_count(&a, LV_ANIM_REPEAT_INFINITE);
-    return a;
-}
-
-
 static lv_anim_t fan_animation(lv_obj_t *img, uint32_t period) {
     lv_anim_t a;
     lv_anim_init(&a);
@@ -1313,9 +1277,6 @@ static void drag_event_handler(lv_event_t *e) {
         lv_obj_align(obj, LV_ALIGN_RIGHT_MID, 8, 0);
     }
 }
-
-
-static void snap_event_handler(lv_event_t *e) {}
 
 
 static uint8_t is_screen_almost_full(model_t *model) {
